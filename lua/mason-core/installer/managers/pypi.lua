@@ -9,7 +9,10 @@ local pep440 = require "mason-core.pep440"
 local platform = require "mason-core.platform"
 local providers = require "mason-core.providers"
 local semver = require "mason-core.semver"
+local settings = require "mason.settings"
 local spawn = require "mason-core.spawn"
+
+local use_uv = settings.current.pip.use_uv
 
 local M = {}
 
@@ -154,6 +157,7 @@ local function find_venv_executable(ctx, executable)
             return Result.success(candidate)
         end
     end
+
     return Result.failure(("Failed to find executable %q in Python virtual environment."):format(executable))
 end
 
@@ -161,25 +165,47 @@ end
 ---@param args SpawnArgs
 local function venv_python(args)
     local ctx = installer.context()
-    return find_venv_executable(ctx, "python"):and_then(function(python_path)
-        return ctx.spawn[path.concat { ctx.cwd:get(), python_path }](args)
+    return find_venv_executable(ctx, "python"):and_then(function(bin_path)
+        return ctx.spawn[path.concat { ctx.cwd:get(), bin_path }](args)
     end)
+end
+
+---@async
+---@param args SpawnArgs
+local function uv_python(args)
+    local ctx = installer.context()
+    local global_uv = vim.fn.exepath "uv"
+    return ctx.spawn[global_uv](args)
 end
 
 ---@async
 ---@param pkgs string[]
 ---@param extra_args? string[]
 local function pip_install(pkgs, extra_args)
-    return venv_python {
-        "-m",
-        "pip",
-        "--disable-pip-version-check",
-        "install",
-        "--no-user",
-        "--ignore-installed",
-        extra_args or vim.NIL,
-        pkgs,
-    }
+    if use_uv then
+        return uv_python {
+            "pip",
+            "install",
+            "--color",
+            "never",
+            "--directory",
+            "venv",
+            "-U",
+            extra_args or vim.NIL,
+            pkgs,
+        }
+    else
+        return venv_python {
+            "-m",
+            "pip",
+            "--disable-pip-version-check",
+            "install",
+            "--no-user",
+            "--ignore-installed",
+            extra_args or vim.NIL,
+            pkgs,
+        }
+    end
 end
 
 ---@async
