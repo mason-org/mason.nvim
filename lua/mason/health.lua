@@ -227,6 +227,19 @@ local function check_languages()
     apt-get install python3-venv]],
                 },
             }
+            check {
+                cmd = "uv",
+                args = { "--version" },
+                name = "uv",
+                relaxed = true,
+                advice = {
+                    [[`uv` not installed, if you want to use the `use_uv` argument
+                    in the pip section of the configuration, you must install it.
+
+                    https://docs.astral.sh/uv/getting-started/installation/
+                    ]],
+                },
+            }
         end,
         function()
             a.scheduler()
