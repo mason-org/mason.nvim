@@ -8,7 +8,7 @@ local M = {}
 local PWSHOPT = {
     progress_preference = [[ $ProgressPreference = 'SilentlyContinue'; ]], -- https://stackoverflow.com/a/63301751
     security_protocol = [[ [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; ]],
-    error_action_preference = [[ $ErrorActionPreference = "Stop"; ]],
+    error_action_preference = [[ $ErrorActionPreference = 'Stop'; ]],
 }
 
 local powershell = _.lazy(function()

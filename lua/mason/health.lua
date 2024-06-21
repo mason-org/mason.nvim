@@ -114,13 +114,13 @@ local function check_core_utils()
 
     if platform.is.win then
         check {
-            cmd = "pwsh",
+            cmd = (vim.fn.executable "pwsh" == 1 and "pwsh" or "powershell"),
             args = {
                 "-NoProfile",
                 "-Command",
-                [[$PSVersionTable.PSVersion, $PSVersionTable.OS, $PSVersionTable.Platform -join " "]],
+                [[$PSVersionTable.PSVersion, $PSVersionTable.OS, $PSVersionTable.Platform -join ' ']],
             },
-            name = "pwsh",
+            name = (vim.fn.executable "pwsh" == 1 and "pwsh" or "powershell")  -- mason switched back to a powershell default
         }
         check { cmd = "7z", args = { "--help" }, name = "7z", relaxed = true }
     end
