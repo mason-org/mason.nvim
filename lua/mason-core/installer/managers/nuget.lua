@@ -1,5 +1,6 @@
 local Result = require "mason-core.result"
 local installer = require "mason-core.installer"
+local log = require "mason-core.log"
 local platform = require "mason-core.platform"
 local fetch = require "mason-core.fetch"
 
@@ -11,8 +12,9 @@ local M = {}
 ---@param repository_url string
 ---@nodiscard
 function M.install(package, version, repository_url)
+    log.fmt_debug("nuget: install %s %s", package, version)
     local ctx = installer.context()
-
+    ctx.stdio_sink.stdout(("Installing nuget package %s@%s…\n"):format(package, version))
     local args = {
         "tool",
         "update",
