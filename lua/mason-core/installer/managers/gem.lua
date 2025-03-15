@@ -20,6 +20,7 @@ function M.install(pkg, version, opts)
         "install",
         "--no-user-install",
         "--no-format-executable",
+        "--env-shebang",
         "--install-dir=.",
         "--bindir=bin",
         "--no-document",
