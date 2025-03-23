@@ -725,7 +725,7 @@ update_registry_info()
 
 window.init {
     effects = effects,
-    border = settings.current.ui.border,
+    border = settings.current.ui.border or vim.o.winborder,
     winhighlight = {
         "NormalFloat:MasonNormal",
     },

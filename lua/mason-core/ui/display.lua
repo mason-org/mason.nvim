@@ -185,7 +185,7 @@ local function create_popup_window_opts(opts, sizes_only)
     local width = calc_size(settings.current.ui.width, columns)
     local row = math.floor((lines - height) / 2)
     local col = math.floor((columns - width) / 2)
-    if opts.border ~= "none" then
+    if opts.border ~= "none" or vim.o.winborder then
         row = math.max(row - 1, 0)
         col = math.max(col - 1, 0)
     end
@@ -201,7 +201,7 @@ local function create_popup_window_opts(opts, sizes_only)
     }
 
     if not sizes_only then
-        popup_layout.border = opts.border
+        popup_layout.border = opts.border or vim.o.winborder
     end
 
     return popup_layout
@@ -215,6 +215,7 @@ local function create_backdrop_window_opts()
         row = 0,
         col = 0,
         style = "minimal",
+        border = "none",
         focusable = false,
         zindex = 44,
     }
