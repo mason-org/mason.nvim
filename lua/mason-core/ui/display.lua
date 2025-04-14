@@ -217,6 +217,7 @@ local function create_backdrop_window_opts()
         style = "minimal",
         focusable = false,
         zindex = 44,
+        border = "none",
     }
 end
 
