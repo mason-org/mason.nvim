@@ -23,60 +23,62 @@ describe("package", function()
         assert.same({ "rust-analyzer", "nightly" }, parse "rust-analyzer@nightly")
     end)
 
-    it("should validate spec", function()
-        local valid_spec = {
-            name = "Package name",
-            desc = "Package description",
-            homepage = "https://example.com",
-            categories = { Pkg.Cat.LSP },
-            languages = { Pkg.Lang.Rust },
-            install = function() end,
-        }
-        local function spec(fields)
-            return setmetatable(fields, { __index = valid_spec })
-        end
-        assert.equals(
-            "name: expected string, got number",
-            assert.has_error(function()
-                Pkg.new(spec { name = 23 })
-            end)
-        )
+    if vim.fn.has "nvim-0.11" == 1 then
+        it("should validate spec", function()
+            local valid_spec = {
+                name = "Package name",
+                desc = "Package description",
+                homepage = "https://example.com",
+                categories = { Pkg.Cat.LSP },
+                languages = { Pkg.Lang.Rust },
+                install = function() end,
+            }
+            local function spec(fields)
+                return setmetatable(fields, { __index = valid_spec })
+            end
+            assert.equals(
+                "name: expected string, got number",
+                assert.has_error(function()
+                    Pkg.new(spec { name = 23 })
+                end)
+            )
 
-        assert.equals(
-            "desc: expected string, got number",
-            assert.has_error(function()
-                Pkg.new(spec { desc = 23 })
-            end)
-        )
+            assert.equals(
+                "desc: expected string, got number",
+                assert.has_error(function()
+                    Pkg.new(spec { desc = 23 })
+                end)
+            )
 
-        assert.equals(
-            "homepage: expected string, got number",
-            assert.has_error(function()
-                Pkg.new(spec { homepage = 23 })
-            end)
-        )
+            assert.equals(
+                "homepage: expected string, got number",
+                assert.has_error(function()
+                    Pkg.new(spec { homepage = 23 })
+                end)
+            )
 
-        assert.equals(
-            "categories: expected table, got number",
-            assert.has_error(function()
-                Pkg.new(spec { categories = 23 })
-            end)
-        )
+            assert.equals(
+                "categories: expected table, got number",
+                assert.has_error(function()
+                    Pkg.new(spec { categories = 23 })
+                end)
+            )
 
-        assert.equals(
-            "languages: expected table, got number",
-            assert.has_error(function()
-                Pkg.new(spec { languages = 23 })
-            end)
-        )
+            assert.equals(
+                "languages: expected table, got number",
+                assert.has_error(function()
+                    Pkg.new(spec { languages = 23 })
+                end)
+            )
 
-        assert.equals(
-            "install: expected function, got number",
-            assert.has_error(function()
-                Pkg.new(spec { install = 23 })
-            end)
-        )
-    end)
+            assert.equals(
+                "install: expected function, got number",
+                assert.has_error(function()
+                    Pkg.new(spec { install = 23 })
+                end)
+            )
+        end)
+    end
 
     it("should create new handle", function()
         local dummy = registry.get_package "dummy"
@@ -189,6 +191,30 @@ describe("package", function()
             assert.wait_for(function()
                 assert.is_true(handle:is_closed())
             end)
+        end)
+    )
+
+    it(
+        "should be able to instantiate package outside of main loop",
+        async_test(function()
+            local dummy = registry.get_package "registry"
+
+            -- Move outside the main loop
+            a.wait(function(resolve)
+                local timer = vim.loop.new_timer()
+                timer:start(0, 0, function()
+                    timer:close()
+                    resolve()
+                end)
+            end)
+
+            assert.is_true(vim.in_fast_event())
+
+            local pkg = assert.is_not.has_error(function()
+                return Pkg.new(dummy.spec)
+            end)
+
+            assert.same(dummy.spec, pkg.spec)
         end)
     )
 end)

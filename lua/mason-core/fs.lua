@@ -134,6 +134,13 @@ local function make_module(uv)
             log.trace("fs: fs_readdir", path, entries)
             if entries and #entries > 0 then
                 for i = 1, #entries do
+                    if entries[i].name and not entries[i].type then
+                        -- See https://github.com/luvit/luv/issues/660
+                        local full_path = Path.concat { path, entries[i].name }
+                        log.trace("fs: fs_readdir falling back to fs_stat to find type", full_path)
+                        local stat = uv.fs_stat(full_path)
+                        entries[i].type = stat.type
+                    end
                     all_entries[#all_entries + 1] = entries[i]
                 end
             else
