@@ -4,6 +4,19 @@ local M = {}
 
 local uname = vim.loop.os_uname()
 
+-- Most of the code that calls into these functions executes outside of the main event loop, where API/fn functions are
+-- disabled. We evaluate these immediately here to avoid issues with main loop synchronization.
+M.cached_features = {
+    ["win"] = vim.fn.has "win32",
+    ["win32"] = vim.fn.has "win32",
+    ["win64"] = vim.fn.has "win64",
+    ["mac"] = vim.fn.has "mac",
+    ["darwin"] = vim.fn.has "mac",
+    ["unix"] = vim.fn.has "unix",
+    ["linux"] = vim.fn.has "linux",
+    ["nvim-0.11"] = vim.fn.has "nvim-0.11",
+}
+
 ---@alias Platform
 ---| '"darwin_arm64"'
 ---| '"darwin_x64"'
@@ -63,19 +76,6 @@ local get_libc = _.lazy(function()
         end
     end
 end)
-
--- Most of the code that calls into these functions executes outside of the main event loop, where API/fn functions are
--- disabled. We evaluate these immediately here to avoid issues with main loop synchronization.
-M.cached_features = {
-    ["win"] = vim.fn.has "win32",
-    ["win32"] = vim.fn.has "win32",
-    ["win64"] = vim.fn.has "win64",
-    ["mac"] = vim.fn.has "mac",
-    ["darwin"] = vim.fn.has "mac",
-    ["unix"] = vim.fn.has "unix",
-    ["linux"] = vim.fn.has "linux",
-    ["nvim-0.11"] = vim.fn.has "nvim-0.11",
-}
 
 ---@type fun(env: string): boolean
 local check_env = _.memoize(_.cond {
