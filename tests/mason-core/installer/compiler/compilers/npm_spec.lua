@@ -56,4 +56,26 @@ describe("npm compiler :: installing", function()
         assert.spy(manager.install).was_called(1)
         assert.spy(manager.install).was_called_with("@namespace/package", "v1.5.0", { extra_packages = { "extra" } })
     end)
+
+    it("should install npm packages when use_pnpm is set to true", function()
+        local ctx = create_dummy_context()
+        local manager = require "mason-core.installer.managers.pnpm"
+        local settings = require "mason.settings"
+        settings.current.npm.use_pnpm = true
+        stub(manager, "init", mockx.returns(Result.success()))
+        stub(manager, "install", mockx.returns(Result.success()))
+
+        local result = installer.exec_in_context(ctx, function()
+            return npm.install(ctx, {
+                package = "@namespace/package",
+                version = "v1.5.0",
+                extra_packages = { "extra" },
+            })
+        end)
+
+        assert.is_true(result:is_success())
+        assert.spy(manager.init).was_called(1)
+        assert.spy(manager.install).was_called(1)
+        assert.spy(manager.install).was_called_with("@namespace/package", "v1.5.0", { extra_packages = { "extra" } })
+    end)
 end)
