@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.1.0-rc.2](https://github.com/mason-org/mason.nvim/compare/v2.0.0-rc.2...v2.1.0-rc.2) (2025-05-06)
+
+
+### Features
+
+* associate package instances with registry source and record it in receipt ([f74983e](https://github.com/mason-org/mason.nvim/commit/f74983e782b7394f5737df99f8823e196a23291d))
+* **ui:** display current version in header ([130936b](https://github.com/mason-org/mason.nvim/commit/130936b87368e2c37cec013f69b1aa94c6f2fd20))
+* **ui:** display purl information ([0d297a1](https://github.com/mason-org/mason.nvim/commit/0d297a1932e0c8d1f079d4f5bc302535d7a2c96d))
+* **ui:** support 'winborder' ([0847c02](https://github.com/mason-org/mason.nvim/commit/0847c02962a1cdf12528cf306f74633288369160))
+
+
+### Bug Fixes
+
+* **registry:** fix registry.is_installed() ([e638ed8](https://github.com/mason-org/mason.nvim/commit/e638ed8e0dbf297feedc127e65e95667e9da373c))
+* **ui:** fix setting outdated package state ([d2b6c08](https://github.com/mason-org/mason.nvim/commit/d2b6c0890c8f95db3bba4711b38d341dbcd14e34))
+
 ## [2.0.0](https://github.com/williamboman/mason.nvim/compare/v1.11.0...v2.0.0) (2025-05-06)
 
 This release has been an ongoing effort for quite some time now and is now ready for release. Most users should not
