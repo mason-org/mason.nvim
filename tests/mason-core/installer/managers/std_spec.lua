@@ -141,7 +141,7 @@ describe("std clone", function()
     it("should clone", function()
         local ctx = test_helpers.create_context()
         ctx:execute(function()
-            std.clone "https://github.com/williamboman/mason.nvim"
+            std.clone "https://github.com/mason-org/mason.nvim"
         end)
 
         assert.spy(ctx.spawn.git).was_called(1)
@@ -150,7 +150,7 @@ describe("std clone", function()
             "--depth",
             "1",
             vim.NIL, -- recursive
-            "https://github.com/williamboman/mason.nvim",
+            "https://github.com/mason-org/mason.nvim",
             ".",
         }
     end)
@@ -158,7 +158,7 @@ describe("std clone", function()
     it("should clone and checkout rev", function()
         local ctx = test_helpers.create_context()
         ctx:execute(function()
-            std.clone("https://github.com/williamboman/mason.nvim", {
+            std.clone("https://github.com/mason-org/mason.nvim", {
                 rev = "e1fd03b1856cb5ad8425f49e18353dc524b02f91",
                 recursive = true,
             })
@@ -170,7 +170,7 @@ describe("std clone", function()
             "--depth",
             "1",
             "--recursive",
-            "https://github.com/williamboman/mason.nvim",
+            "https://github.com/mason-org/mason.nvim",
             ".",
         }
         assert

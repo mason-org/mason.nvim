@@ -30,7 +30,7 @@ describe("fetch", function()
         assert.spy(spawn.curl).was_called(1)
         assert.spy(spawn.wget).was_called_with {
             {
-                ("--header=User-Agent: mason.nvim %s (+https://github.com/williamboman/mason.nvim)"):format(
+                ("--header=User-Agent: mason.nvim %s (+https://github.com/mason-org/mason.nvim)"):format(
                     version.VERSION
                 ),
                 "--header=X-Custom-Header: here",
@@ -50,7 +50,7 @@ describe("fetch", function()
             match.same {
                 {
                     "-H",
-                    ("User-Agent: mason.nvim %s (+https://github.com/williamboman/mason.nvim)"):format(version.VERSION),
+                    ("User-Agent: mason.nvim %s (+https://github.com/mason-org/mason.nvim)"):format(version.VERSION),
                 },
                 {
                     "-H",
@@ -86,7 +86,7 @@ describe("fetch", function()
 
         assert.spy(spawn.wget).was_called_with {
             {
-                ("--header=User-Agent: mason.nvim %s (+https://github.com/williamboman/mason.nvim)"):format(
+                ("--header=User-Agent: mason.nvim %s (+https://github.com/mason-org/mason.nvim)"):format(
                     version.VERSION
                 ),
             },
@@ -105,7 +105,7 @@ describe("fetch", function()
             match.same {
                 {
                     "-H",
-                    ("User-Agent: mason.nvim %s (+https://github.com/williamboman/mason.nvim)"):format(version.VERSION),
+                    ("User-Agent: mason.nvim %s (+https://github.com/mason-org/mason.nvim)"):format(version.VERSION),
                 },
             },
             "-fsSL",

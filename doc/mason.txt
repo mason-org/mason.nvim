@@ -21,31 +21,6 @@ default. Executables are linked to a single `bin/` directory, which
 from Neovim builtins (shell, terminal, etc.) as well as other 3rd party
 plugins.
 
------------------
-MASON.NVIM LUA API
-                                                         *mason-api-reference*
-Mason offers a public Lua API that allows you to further customize or
-extend Mason. You may find documentation for it in the link below.
-
-https://github.com/williamboman/mason.nvim/blob/main/doc/reference.md
-
-Note ~
-    APIs not listed in the document are not considered public and are subject
-    to unannounced breaking changes.
-
------------------
-EXTENSION PLUGINS
-                                                            *mason-extensions*
-Extension plugins help fill gaps with the rest of the Neovim ecosystem.
-
-mason-lspconfig ~
-    `mason-lspconfig` bridges Mason with the `lspconfig` plugin - making
-    it easier to use both plugins together.
-    https://github.com/williamboman/mason-lspconfig.nvim
-
-3rd party extensions ~
-    https://github.com/williamboman/mason.nvim/wiki/Extensions
-
 ==============================================================================
 REQUIREMENTS                                              *mason-requirements*
 
@@ -106,9 +81,9 @@ finished installing:
     $ nvim --headless -c "MasonInstall lua-language-server rust-analyzer" -c qall
 <
 Note: ~
-    You may also use the Lua API |mason-api-reference| to programmatically
-    manage package installations. Through this interface you will also gain
-    access to more features to allow further customization.
+    You may also use Mason's Lua API to programmatically manage package
+    installations. Through this interface you will also gain access to more
+    features to allow further customization.
 
 -----------------
 THE MASON WINDOW
@@ -147,27 +122,14 @@ with registries appearing first in the list having precedence.
 HOW TO INSTALL PACKAGES                        *mason-how-to-install-packages*
 
 You may install packages either via the command interface or via Mason's Lua
-APIs. See |:MasonInstall| or |mason-api-reference| for more details.
+APIs. See |:MasonInstall| for more details.
 
 ==============================================================================
 HOW TO USE PACKAGES                                *mason-how-to-use-packages*
 
 Although many packages are perfectly usable out of the box through Neovim
 builtins, it is recommended to use other 3rd party plugins to further
-integrate these. The following plugins are recommended:
-
--   LSP: `lspconfig` & `mason-lspconfig.nvim`
--   DAP: `nvim-dap` & `nvim-dap-ui`
--   Linters: `null-ls.nvim` or `nvim-lint`
--   Formatters: `null-ls.nvim` or `formatter.nvim`
-
-formatter.nvim        https://github.com/mhartington/formatter.nvim
-lspconfig             https://github.com/neovim/nvim-lspconfig
-mason-lspconfig.nvim  https://github.com/williamboman/mason-lspconfig.nvim
-null-ls.nvim          https://github.com/jose-elias-alvarez/null-ls.nvim
-nvim-dap              https://github.com/mfussenegger/nvim-dap
-nvim-dap-ui           https://github.com/rcarriga/nvim-dap-ui
-nvim-lint             https://github.com/mfussenegger/nvim-lint
+integrate these.
 
 See also ~
     Execute external commands: |:!cmd|.

@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0](https://github.com/williamboman/mason.nvim/compare/v1.11.0...v2.0.0) (2025-05-06)
+## [2.0.0](https://github.com/mason-org/mason.nvim/compare/v1.11.0...v2.0.0) (2025-05-06)
 
 This release has been an ongoing effort for quite some time now and is now ready for release. Most users should not
 experience any breaking changes. If you use any of the Lua APIs that Mason provides you'll find an outline of the

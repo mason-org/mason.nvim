@@ -3,7 +3,7 @@ local fetch = require "mason-core.fetch"
 
 local api = {}
 
--- https://github.com/williamboman/mason-registry-api
+-- https://github.com/mason-org/mason-registry-api
 local BASE_URL = "https://api.mason-registry.dev"
 
 local stringify_params = _.compose(_.join "&", _.map(_.join "="), _.sort_by(_.head), _.to_pairs)

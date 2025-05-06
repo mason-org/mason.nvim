@@ -246,7 +246,7 @@ end
 ---@async
 local function check_mason()
     providers.github
-        .get_latest_release("williamboman/mason.nvim")
+        .get_latest_release("mason-org/mason.nvim")
         :on_success(
             ---@param latest_release GitHubRelease
             function(latest_release)

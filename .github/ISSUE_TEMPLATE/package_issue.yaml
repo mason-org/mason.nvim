@@ -11,7 +11,7 @@ body:
           value: |
               # Issue reporting guidelines
 
-              1. This is not a general support board for package usage questions (e.g. "How do I do X?"). For questions, please refer to [the discussion board](https://github.com/williamboman/mason.nvim/discussions/categories/q-a) first! :)
+              1. This is not a general support board for package usage questions (e.g. "How do I do X?"). For questions, please refer to [the discussion board](https://github.com/mason-org/mason.nvim/discussions/categories/q-a) first! :)
               1. Before reporting an issue, make sure that you meet the minimum requirements mentioned in the README. Also review `:checkhealth mason` for potential problems.
               1. General usage issues with packages should not be reported here. Please only report issues that you believe are a result of something that mason.nvim does.
               1. Please try to review errors yourself first and ensure it's not a problem that is local to your system only.

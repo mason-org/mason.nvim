@@ -29,7 +29,7 @@ return function(state)
                     p.highlight(settings.current.ui.keymaps.toggle_help),
                     p.none " for help",
                 }),
-                { p.Comment "https://github.com/williamboman/mason.nvim" },
+                { p.Comment "https://github.com/mason-org/mason.nvim" },
             },
         }),
         Ui.When(not state.info.registry_update.in_progress and #uninstalled_registries > 0, function()

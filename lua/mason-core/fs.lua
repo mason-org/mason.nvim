@@ -39,7 +39,7 @@ local function make_module(uv)
     function M.rmrf(path)
         assert(
             Path.is_subdirectory(settings.current.install_root_dir, path),
-            ("Refusing to rmrf %q which is outside of the allowed boundary %q. Please report this error at https://github.com/williamboman/mason.nvim/issues/new"):format(
+            ("Refusing to rmrf %q which is outside of the allowed boundary %q. Please report this error at https://github.com/mason-org/mason.nvim/issues/new"):format(
                 path,
                 settings.current.install_root_dir
             )
