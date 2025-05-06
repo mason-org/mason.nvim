@@ -25,6 +25,10 @@ describe("mason-registry", function()
 
     it("should check if package is installed", function()
         local dummy = registry.get_package "dummy"
+        -- TODO unflake this in a better way
+        if dummy:is_installed() then
+            test_helpers.sync_uninstall(dummy)
+        end
         assert.is_false(registry.is_installed "dummy")
         test_helpers.sync_install(dummy)
         assert.is_true(registry.is_installed "dummy")
