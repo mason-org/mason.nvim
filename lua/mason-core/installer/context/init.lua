@@ -91,7 +91,16 @@ function InstallContext:promote_cwd()
     -- 3. Update cwd
     self.cwd:set(install_path)
     -- 4. Move the cwd to the final installation directory
-    fs.async.rename(cwd, install_path)
+
+    if pcall(function()
+        fs.async.rename(cwd, install_path)
+    end) then
+        -- this worked as normal, do nothing
+    else
+        -- on some file systems, we cannot create the directory before renaming. Therefore, remove it and then rename.
+        fs.async.rmdir(install_path)
+        fs.async.rename(cwd, install_path)
+    end
 end
 
 ---@param rel_path string The relative path from the current working directory to change cwd to. Will only restore to the initial cwd after execution of fn (if provided).
