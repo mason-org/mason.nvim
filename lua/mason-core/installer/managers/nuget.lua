@@ -29,13 +29,6 @@ function M.install(package, version, repository_url)
     local package_base_address = resource["@id"]
     local package_lowercase = package:lower()
 
-    local nupkg_download_url = string.format("%s%s/%s/%s.%s.nupkg",
-        package_base_address,
-        package_lowercase,
-        version,
-        package_lowercase,
-        version)
-
     local nuspec_url = string.format("%s%s/%s/%s.nuspec",
         package_base_address,
         package_lowercase,
@@ -46,19 +39,51 @@ function M.install(package, version, repository_url)
 
     local nuspec_file = M.fetch_nuget_endpoint_xml(nuspec_url):get_or_throw()
 
-    if string.match(nuspec_file, "<packageType%s+name%s*=%s*\"DotnetTool\"%s*/>") then
-        -- print(vim.inspect(nuspec_file))
-        print(package_lowercase .. ": " .. "It's a tool!")
+    ctx.stdio_sink.stdout(("Installing nuget package %s@%s…\n"):format(package, version))
+
+    local is_dotnet_tool = string.match(nuspec_file, "<packageType%s+name%s*=%s*\"DotnetTool\"%s*/>")
+    if is_dotnet_tool then
+        return M.install_dotnet_tool(package, version, repository_url)
+    else
+        local nupkg_download_url = string.format("%s%s/%s/%s.%s.nupkg",
+            package_base_address,
+            package_lowercase,
+            version,
+            package_lowercase,
+            version)
+
+        local download_item = {
+            download_url = nupkg_download_url,
+            out_file = string.format("%s-%s.nupkg", package, version)
+        }
+
+        return common.download_files(ctx, { download_item })
     end
+end
 
-    ctx.stdio_sink:stdout(("Installing nuget package %s@%s…\n"):format(package, version))
+---@async
+---@param package string
+---@param version string
+---@param repository_url string
+---@nodiscard
+function M.install_dotnet_tool(package, version, repository_url)
+    local ctx = installer.context()
 
-    local download_item = {
-        download_url = nupkg_download_url,
-        out_file = string.format("%s-%s.nupkg", package, version)
+    local args = {
+        "tool",
+        "update",
+        "--tool-path",
+        ".",
+        { "--version", version },
     }
 
-    return common.download_files(ctx, { download_item })
+    if repository_url then
+        table.insert(args, { "--add-source",  repository_url })
+    end
+
+    table.insert(args, package)
+
+    return ctx.spawn.dotnet(args)
 end
 
 ---@alias NugetIndexResource { '@id': string, '@type': string}
