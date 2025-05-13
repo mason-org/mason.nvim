@@ -91,7 +91,10 @@ your personal usage, some of these will also need to be installed. Refer to `:ch
 
 ```lua
 use {
-    "mason-org/mason.nvim"
+    "mason-org/mason.nvim",
+    config = function()
+        require("mason").setup() -- setup call required
+    end,
 }
 ```
 
@@ -99,7 +102,8 @@ use {
 
 ```lua
 {
-    "mason-org/mason.nvim"
+    "mason-org/mason.nvim",
+    opts = {}, -- required even if empty
 }
 ```
 
@@ -116,6 +120,8 @@ Plug 'mason-org/mason.nvim'
 ```lua
 require("mason").setup()
 ```
+
+The `setup` call is required. 
 
 `mason.nvim` is optimized to load as little as possible during setup. Lazy-loading the plugin, or somehow deferring the
 setup, is not recommended.
