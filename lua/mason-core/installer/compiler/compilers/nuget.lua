@@ -9,6 +9,10 @@ function M.parse(source, purl)
 
     local repository_url = _.path({ "qualifiers", "repository_url" }, purl)
 
+    if not repository_url then
+        repository_url = "https://api.nuget.org/v3/index.json"
+    end
+
     ---@class ParsedNugetSource : ParsedPackageSource
     ---@field repository_url string Custom repository URL to pull from
     local parsed_source = {
