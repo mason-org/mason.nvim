@@ -15,7 +15,7 @@ function M.install(package, version, repository_url)
     log.fmt_debug("nuget: install %s %s", package, version)
     local ctx = installer.context()
 
-    local index_file = M.fetch_nuget_index_file(repository_url):get_or_throw()
+    local index_file = M.fetch_nuget_endpoint(repository_url):get_or_throw()
 
     assert(index_file, "nuget index file could not be retrieved")
 
@@ -26,12 +26,30 @@ function M.install(package, version, repository_url)
 
     assert(resource, "could not get PackageBaseAddress resource from nuget index file")
 
+    local package_base_address = resource["@id"]
+    local package_lowercase = package:lower()
+
     local nupkg_download_url = string.format("%s%s/%s/%s.%s.nupkg",
-        resource["@id"],
-        package:lower(),
+        package_base_address,
+        package_lowercase,
         version,
-        package:lower(),
+        package_lowercase,
         version)
+
+    local nuspec_url = string.format("%s%s/%s/%s.nuspec",
+        package_base_address,
+        package_lowercase,
+        version,
+        package_lowercase)
+
+    assert(nuspec_url, "nuspec url should be set")
+
+    local nuspec_file = M.fetch_nuget_endpoint_xml(nuspec_url):get_or_throw()
+
+    if string.match(nuspec_file, "<packageType%s+name%s*=%s*\"DotnetTool\"%s*/>") then
+        -- print(vim.inspect(nuspec_file))
+        print(package_lowercase .. ": " .. "It's a tool!")
+    end
 
     ctx.stdio_sink:stdout(("Installing nuget package %s@%s…\n"):format(package, version))
 
@@ -49,12 +67,23 @@ end
 ---@async
 ---@param repository_url string
 ---@return Result # Result<NugetIndexFile>
-function M.fetch_nuget_index_file(repository_url)
+function M.fetch_nuget_endpoint(repository_url)
     return fetch(repository_url, {
         headers = {
             Accept = "application/json",
         },
     }):map_catching(vim.json.decode)
+end
+
+---@async
+---@param repository_url string
+---@return Result
+function M.fetch_nuget_endpoint_xml(repository_url)
+    return fetch(repository_url, {
+        headers = {
+            Accept = "application/xml",
+        },
+    })
 end
 
 ---@param bin string
