@@ -9,18 +9,26 @@ local M = {}
 ---@param package string
 ---@param version string
 ---@nodiscard
-function M.install(package, version)
+function M.install(package, version, repository_url)
     log.fmt_debug("nuget: install %s %s", package, version)
     local ctx = installer.context()
     ctx.stdio_sink:stdout(("Installing nuget package %s@%s…\n"):format(package, version))
-    return ctx.spawn.dotnet {
+
+    local args = {
         "tool",
         "update",
         "--tool-path",
         ".",
         { "--version", version },
-        package,
     }
+
+    if repository_url then
+        table.insert(args, { "--add-source",  repository_url })
+    end
+
+    table.insert(args, package)
+
+    return ctx.spawn.dotnet(args)
 end
 
 ---@param bin string
