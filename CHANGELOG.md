@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/mason-org/mason.nvim/compare/v2.0.0...v2.0.1) (2025-05-15)
+
+
+### Bug Fixes
+
+* **spawn:** fix calling vim.fn when inside fast event loop on Windows ([#1950](https://github.com/mason-org/mason.nvim/issues/1950)) ([888d6ee](https://github.com/mason-org/mason.nvim/commit/888d6ee499d8089a3a4be4309d239d6be1c1e6c0))
+
 ## [2.0.0](https://github.com/mason-org/mason.nvim/compare/v1.11.0...v2.0.0) (2025-05-06)
 
 This release has been an ongoing effort for quite some time now and is now ready for release. Most users should not
