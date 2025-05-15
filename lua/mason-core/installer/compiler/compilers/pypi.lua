@@ -27,6 +27,7 @@ function M.parse(source, purl)
             pip = {
                 upgrade = settings.current.pip.upgrade_pip,
                 extra_args = settings.current.pip.install_args,
+                use_uv = settings.current.pip.use_uv,
             },
         }
 
@@ -48,11 +49,13 @@ function M.install(ctx, source)
             },
             upgrade_pip = source.pip.upgrade,
             install_extra_args = source.pip.extra_args,
+            use_uv = source.pip.use_uv,
         })
         try(pypi.install(source.package, source.version, {
             extra = source.extra,
             extra_packages = source.extra_packages,
             install_extra_args = source.pip.extra_args,
+            use_uv = source.pip.use_uv,
         }))
     end)
 end
