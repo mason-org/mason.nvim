@@ -50,7 +50,7 @@ function:
     require("mason").setup()
 <
 Mason will do the following during setup:
-    1) enhance the Neovim session's PATH environment
+    1) add Mason's `bin/` directory to the Neovim session's PATH
     2) register commands (|mason-commands|)
 
 Refer to |mason-settings| for all available settings.
