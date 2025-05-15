@@ -27,8 +27,22 @@ function M.setup(config)
         Registry.sources:append(registry)
     end
 
-    require "mason.api.command"
+    local Command = require "mason.api.command"
     setup_autocmds()
+
+    local Package = require "mason-core.package"
+    local pkgs_to_install = {}
+    for _, pkg_identifier in ipairs(settings.current.ensure_installed or {}) do
+        local pkg_name, _ = Package.Parse(pkg_identifier)
+        local ok, pkg = pcall(Registry.get_package, pkg_name)
+        if ok and not pkg:is_installed() and not pkg:is_installing() then
+            table.insert(pkgs_to_install, pkg_identifier)
+        end
+    end
+    if not vim.tbl_isempty(pkgs_to_install) then
+        Command.MasonInstall(pkgs_to_install)
+    end
+
     M.has_setup = true
 end
 
