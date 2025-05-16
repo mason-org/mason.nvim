@@ -1,7 +1,7 @@
 local Result = require "mason-core.result"
 local common = require "mason-core.installer.managers.common"
-local util = require "mason-core.installer.registry.util"
-local expr = require "mason-core.installer.registry.expr"
+local util = require "mason-core.installer.compiler.util"
+local expr = require "mason-core.installer.compiler.expr"
 local nuget = require "mason-core.installer.managers.nuget"
 local _ = require "mason-core.functional"
 
