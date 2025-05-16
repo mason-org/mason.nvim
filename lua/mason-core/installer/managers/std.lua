@@ -224,6 +224,7 @@ local unpack_by_filename = _.cond {
     { _.matches "%.tar%.zst$", untar_zst },
     { _.matches "%.zip$", unzip },
     { _.matches "%.vsix$", unzip },
+    { _.matches "%.nupkg$", unzip },
     { _.matches "%.gz$", gunzip },
     { _.T, _.compose(Result.success, _.format "%q doesn't need unpacking.") },
 }
