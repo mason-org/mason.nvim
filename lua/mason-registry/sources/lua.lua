@@ -88,6 +88,11 @@ function LuaRegistrySource:serialize()
     }
 end
 
+---@param other LuaRegistrySource
+function LuaRegistrySource:is_same_location(other)
+    return self.id == other.id
+end
+
 function LuaRegistrySource:__tostring()
     return ("LuaRegistrySource(mod=%s)"):format(self.spec.mod)
 end

@@ -171,6 +171,11 @@ function GitHubRegistrySource:serialize()
     }
 end
 
+---@param other GitHubRegistrySource
+function GitHubRegistrySource:is_same_location(other)
+    return self.spec.namespace == other.spec.namespace and self.spec.name == other.spec.name
+end
+
 function GitHubRegistrySource:__tostring()
     if self.spec.version then
         return ("GitHubRegistrySource(repo=%s, version=%s)"):format(self.repo, self.spec.version)
