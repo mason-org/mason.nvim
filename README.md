@@ -155,6 +155,23 @@ require("mason").setup({
 })
 ```
 
+### Configuration using `lazy.nvim`
+
+```lua
+{
+    "mason-org/mason.nvim",
+    opts = {
+        ui = {
+            icons = {
+                package_installed = "✓",
+                package_pending = "➜",
+                package_uninstalled = "✗"
+            }
+        }
+    }
+}
+```
+
 ### Default configuration
 
 ```lua
