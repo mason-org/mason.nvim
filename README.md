@@ -4,7 +4,9 @@
 [![GitHub CI](https://github.com/mason-org/mason.nvim/workflows/Tests/badge.svg)](https://github.com/mason-org/mason.nvim/actions?query=workflow%3ATests+branch%3Amain+event%3Apush)
 [![Sponsors](https://img.shields.io/github/sponsors/williamboman)](https://github.com/sponsors/williamboman)
 
-<img src="https://user-images.githubusercontent.com/6705160/177613416-0c0354d2-f431-40d8-87f0-21310f0bba0e.png" alt="mason.nvim" />
+<h1>
+    <img src="https://user-images.githubusercontent.com/6705160/177613416-0c0354d2-f431-40d8-87f0-21310f0bba0e.png" alt="mason.nvim" />
+</h1>
 
 <p align="center">
     Portable package manager for Neovim that runs everywhere Neovim runs.<br />
@@ -17,7 +19,7 @@
     <sup>Latest version: v2.0.0</sup> <!-- x-release-please-version -->
 </p>
 
-# Table of Contents
+## Table of Contents
 
 -   [Introduction](#introduction)
 -   [Installation & Usage](#installation--usage)
@@ -28,7 +30,7 @@
 -   [Screenshots](#screenshots)
 -   [Configuration](#configuration)
 
-# Introduction
+## Introduction
 
 > [`:h mason-introduction`][help-mason-introduction]
 
@@ -42,7 +44,7 @@ from Neovim builtins (LSP client, shell, terminal, etc.) as well as other 3rd pa
 
 For a list of all available packages, see <https://mason-registry.dev/registry/list>.
 
-# Installation & Usage
+## Installation & Usage
 
 > [`:h mason-quickstart`][help-mason-quickstart]
 
@@ -57,7 +59,7 @@ setup, is not recommended.
 
 Refer to the [Configuration](#configuration) section for information about which settings are available.
 
-## Recommended setup for `lazy.nvim`
+### Recommended setup for `lazy.nvim`
 
 The following is the recommended setup when using `lazy.nvim`. It will set up the plugin for you, meaning **you don't have
 to call `require("mason").setup()` yourself**.
@@ -69,7 +71,7 @@ to call `require("mason").setup()` yourself**.
 }
 ```
 
-# Requirements
+## Requirements
 
 > [`:h mason-requirements`][help-mason-requirements]
 
@@ -104,7 +106,7 @@ your personal usage, some of these will also need to be installed. Refer to `:ch
 [winzip]: https://www.winzip.com/
 [winrar]: https://www.win-rar.com/
 
-# Commands
+## Commands
 
 > [`:h mason-commands`][help-mason-commands]
 
@@ -115,7 +117,7 @@ your personal usage, some of these will also need to be installed. Refer to `:ch
 -   `:MasonUninstallAll` - uninstalls all packages
 -   `:MasonLog` - opens the `mason.nvim` log file in a new tab window
 
-# Registries
+## Registries
 
 Mason's core package registry is located at [mason-org/mason-registry](https://github.com/mason-org/mason-registry).
 Before any packages can be used, the registry needs to be downloaded. This is done automatically for you when using the
@@ -132,7 +134,7 @@ functions to ensure you have the latest package information before retrieving pa
 |           <img alt="Main window" src="https://github.com/user-attachments/assets/b9a57d21-f551-45ad-a1e5-a9fd66291510">           |                 <img alt="Language search" src="https://github.com/user-attachments/assets/3d24fb7b-2c57-4948-923b-0a42bb627cbe">                 | <img alt="Language filter" src="https://github.com/user-attachments/assets/c0ca5818-3c74-4071-bc41-427a2cd1056d"> |
 | <img alt="Package information" src="https://github.com/user-attachments/assets/6f9f6819-ac97-483d-a77c-8f6c6131ac85"> | <img alt="New package versions" src="https://github.com/user-attachments/assets/ff1adc4d-2fcc-46df-ab4c-291c891efa50"> |   <img alt="Help window" src="https://github.com/user-attachments/assets/1fbe75e4-fe69-4417-83e3-82329e1c236e">   |
 
-# Configuration
+## Configuration
 
 > [`:h mason-settings`][help-mason-settings]
 
@@ -153,7 +155,7 @@ require("mason").setup({
 })
 ```
 
-## Default configuration
+### Default configuration
 
 ```lua
 ---@class MasonSettings
