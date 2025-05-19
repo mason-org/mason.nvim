@@ -1,3 +1,5 @@
+local log = require "mason-core.log"
+
 ---@class RegistrySource
 ---@field id string
 ---@field get_package fun(self: RegistrySource, pkg_name: string): Package?
@@ -7,6 +9,7 @@
 ---@field is_installed fun(self: RegistrySource): boolean
 ---@field install fun(self: RegistrySource): Result
 ---@field serialize fun(self: RegistrySource): InstallReceiptRegistry
+---@field is_same_location fun(self: RegistrySource, other: RegistrySource): boolean
 
 ---@alias RegistrySourceType '"github"' | '"lua"' | '"file"'
 
@@ -69,6 +72,18 @@ function LazySource:get()
     return self.instance
 end
 
+---@param other LazySource
+function LazySource:is_same_location(other)
+    if self.type == other.type then
+        return self:get():is_same_location(other:get())
+    end
+    return false
+end
+
+function LazySource:get_full_id()
+    return ("%s:%s"):format(self.type, self.id)
+end
+
 function LazySource:__tostring()
     return ("LazySource(type=%s, id=%s)"):format(self.type, self.id)
 end
@@ -113,14 +128,38 @@ end
 
 ---@param registry string
 function LazySourceCollection:append(registry)
-    table.insert(self.list, parse(registry))
+    self:unique_insert(parse(registry))
     return self
 end
 
 ---@param registry string
 function LazySourceCollection:prepend(registry)
-    table.insert(self.list, 1, parse(registry))
+    self:unique_insert(parse(registry), 1)
     return self
+end
+
+---@param source LazySource
+---@param idx? integer
+function LazySourceCollection:unique_insert(source, idx)
+    idx = idx or #self.list + 1
+    if idx > 1 then
+        for i = 1, math.min(idx, #self.list) do
+            if self.list[i]:is_same_location(source) then
+                log.fmt_warn(
+                    "Ignoring duplicate registry entry %s (duplicate of %s)",
+                    source:get_full_id(),
+                    self.list[i]:get_full_id()
+                )
+                return
+            end
+        end
+    end
+    for i = #self.list, idx, -1 do
+        if self.list[i]:is_same_location(source) then
+            table.remove(self.list, i)
+        end
+    end
+    table.insert(self.list, idx, source)
 end
 
 function LazySourceCollection:is_all_installed()
@@ -169,6 +208,15 @@ function LazySourceCollection:to_list(opts)
         table.insert(list, source)
     end
     return list
+end
+
+---@param idx integer
+function LazySourceCollection:get(idx)
+    return self.list[idx]
+end
+
+function LazySourceCollection:size()
+    return #self.list
 end
 
 function LazySourceCollection:__tostring()

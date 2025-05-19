@@ -175,6 +175,7 @@ local function pip_install(pkgs, extra_args)
         "pip",
         "--disable-pip-version-check",
         "install",
+        "--no-user",
         "--ignore-installed",
         extra_args or vim.NIL,
         pkgs,

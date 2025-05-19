@@ -66,6 +66,7 @@ setmetatable(spawn, {
             -- Find the executable path via vim.fn.exepath on Windows because libuv fails to resolve certain executables
             -- in PATH.
             if platform.is.win and (spawn_args.env and has_path(spawn_args.env)) == nil then
+                a.scheduler()
                 local expanded_cmd = vim.fn.exepath(canonical_cmd)
                 if expanded_cmd ~= "" then
                     cmd = expanded_cmd

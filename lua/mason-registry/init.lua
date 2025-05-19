@@ -103,16 +103,16 @@ end
 
 ---@param callback? fun(success: boolean, updated_registries: RegistrySource[])
 function Registry.update(callback)
-    log.debug "Updating the registry."
     local a = require "mason-core.async"
     local installer = require "mason-registry.installer"
     local noop = function() end
 
     a.run(function()
         if installer.channel then
-            log.trace "Registry update already in progress."
+            log.debug "Registry update already in progress."
             return installer.channel:receive():get_or_throw()
         else
+            log.debug "Updating the registry."
             Registry:emit("update:start", Registry.sources)
             return installer
                 .install(Registry.sources, function(finished, all)
