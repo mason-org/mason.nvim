@@ -198,10 +198,7 @@ function InstallContext:write_exec_wrapper(new_executable_rel_path, target_execu
     end
     return self:write_shell_exec_wrapper(
         new_executable_rel_path,
-        ("%q"):format(path.concat {
-            self:get_install_path(),
-            target_executable_rel_path,
-        })
+        target_executable_rel_path
     )
 end
 
@@ -213,6 +210,7 @@ exec %s "$@"
 
 local BATCH_TEMPLATE = _.dedent [[
 @ECHO off
+SET script_dir=%~dp0
 %s
 %s %%*
 ]]
@@ -232,6 +230,11 @@ function InstallContext:write_shell_exec_wrapper(new_executable_rel_path, comman
                 return ("export %s=%q"):format(var, value)
             end, _.to_pairs(env or {}))
 
+            command = ("%q"):format(path.concat {
+                "$(dirname $(realpath $0))/",
+                command,
+            })
+
             self.fs:write_file(new_executable_rel_path, BASH_TEMPLATE:format(_.join("\n", formatted_envs), command))
             self.fs:chmod_exec(new_executable_rel_path)
             return new_executable_rel_path
@@ -242,6 +245,11 @@ function InstallContext:write_shell_exec_wrapper(new_executable_rel_path, comman
                 local var, value = pair[1], pair[2]
                 return ("SET %s=%s"):format(var, value)
             end, _.to_pairs(env or {}))
+
+            command = ("%q"):format(path.concat {
+                "%script_dir%\\",
+                command,
+            })
 
             self.fs:write_file(executable_file, BATCH_TEMPLATE:format(_.join("\n", formatted_envs), command))
             return executable_file
