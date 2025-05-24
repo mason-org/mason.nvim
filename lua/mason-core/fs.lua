@@ -79,6 +79,12 @@ local function make_module(uv)
     end
 
     ---@param path string
+    function M.rmdir(path)
+        log.debug("fs: rmdir", path)
+        uv.fs_rmdir(path)
+    end
+
+    ---@param path string
     ---@param new_path string
     function M.rename(path, new_path)
         log.debug("fs: rename", path, new_path)
