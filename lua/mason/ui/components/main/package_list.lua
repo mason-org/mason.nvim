@@ -57,18 +57,27 @@ local function ExpandedPackageInfo(state, pkg, is_installed)
         end),
         Ui.HlTextNode(_.map(function(line)
             return { p.Comment(line) }
-        end, _.split("\n", pkg.spec.desc))),
+        end, _.split("\n", pkg.spec.description))),
         Ui.EmptyLine(),
         Ui.Table(_.concat(
             _.filter(_.identity, {
                 is_installed and {
                     p.muted "installed version",
-                    pkg_state.version and p.Bold(pkg_state.version)
-                        or (pkg_state.is_checking_version and p.muted "Loading…" or p.muted "-"),
+                    pkg_state.version and p.Bold(pkg_state.version) or p.muted "-",
+                } or {
+                    p.muted "version",
+                    p.Bold(pkg:get_latest_version()),
                 },
                 pkg_state.new_version and {
                     p.muted "latest version",
-                    p.muted(pkg_state.new_version.latest_version),
+                    p.muted(pkg_state.new_version),
+                },
+                pkg_state.installed_purl and {
+                    p.muted "installed purl",
+                    p.highlight(pkg_state.installed_purl),
+                } or {
+                    p.muted "purl",
+                    p.highlight(pkg.spec.source.id),
                 },
                 {
                     p.muted "homepage",
@@ -87,7 +96,6 @@ local function ExpandedPackageInfo(state, pkg, is_installed)
                 return ExecutablesTable(pkg_state.linked_executables)
             end)
         )),
-        -- ExecutablesTable(is_installed and pkg_state.linked_executables or package.spec.executables),
         Ui.When(pkg_state.lsp_settings_schema ~= nil, function()
             local has_expanded = pkg_state.expanded_json_schemas["lsp"]
             return Ui.Node {
@@ -154,18 +162,11 @@ local function PackageComponent(state, pkg, opts)
                 source = ("Deprecated since version %s"):format(pkg.spec.deprecation.since),
             }
         end),
-        Ui.When(pkg_state.is_checking_new_version, function()
-            return Ui.VirtualTextNode { p.Comment " checking for new version…" }
-        end),
         Ui.Keybind(settings.current.ui.keymaps.check_package_version, "CHECK_NEW_PACKAGE_VERSION", pkg),
         Ui.When(pkg_state.new_version ~= nil, function()
             return Ui.DiagnosticsNode {
-                message = ("new version available: %s -> %s"):format(
-                    pkg_state.new_version.current_version,
-                    pkg_state.new_version.latest_version
-                ),
+                message = ("new version available: %s -> %s"):format(pkg_state.version or "-", pkg_state.new_version),
                 severity = vim.diagnostic.severity.INFO,
-                source = pkg_state.new_version.name,
             }
         end),
         Ui.Node(opts.keybinds),
@@ -192,27 +193,35 @@ local get_outdated_packages_preview = _.if_else(
 ---@param state InstallerUiState
 local function Installed(state)
     return Ui.Node {
-        Ui.Keybind(
-            settings.current.ui.keymaps.check_outdated_packages,
-            "CHECK_NEW_VISIBLE_PACKAGE_VERSIONS",
-            nil,
-            true
-        ),
+        Ui.Keybind(settings.current.ui.keymaps.check_outdated_packages, "UPDATE_REGISTRY", nil, true),
         PackageListContainer {
             state = state,
             heading = Ui.Node {
                 Ui.HlTextNode(p.heading "Installed"),
-                Ui.When(state.packages.new_versions_check.is_checking, function()
-                    local new_versions_check = state.packages.new_versions_check
-                    local styling = new_versions_check.percentage_complete == 1 and p.highlight_block or p.muted_block
+                Ui.When(state.info.registry_update.in_progress, function()
+                    local styling = state.info.registry_update.percentage_complete == 1 and p.highlight_block
+                        or p.muted_block
+                    local is_all_registries_installed = _.all(_.prop "is_installed", state.info.registries)
+                    local registry_count = #state.info.registries
+                    local text
+                    if registry_count > 1 then
+                        text = p.Comment(
+                            is_all_registries_installed and ("updating %d registries "):format(registry_count)
+                                or ("installing %d registries "):format(registry_count)
+                        )
+                    else
+                        text = p.Comment(is_all_registries_installed and "updating registry " or "installing registry ")
+                    end
                     return Ui.VirtualTextNode {
-                        p.Comment "checking for new package versions ",
-                        styling(("%-4s"):format(math.floor(new_versions_check.percentage_complete * 100) .. "%")),
-                        styling((" "):rep(new_versions_check.percentage_complete * 15)),
+                        text,
+                        styling(
+                            ("%-4s"):format(math.floor(state.info.registry_update.percentage_complete * 100) .. "%")
+                        ),
+                        styling((" "):rep(state.info.registry_update.percentage_complete * 15)),
                     }
                 end),
                 Ui.When(
-                    not state.packages.new_versions_check.is_checking and #state.packages.outdated_packages > 0,
+                    not state.info.registry_update.in_progress and #state.packages.outdated_packages > 0,
                     function()
                         return Ui.VirtualTextNode {
                             p.muted "Press ",

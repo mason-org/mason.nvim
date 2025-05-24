@@ -30,4 +30,4 @@ jobs:
                   mv shellharden /usr/local/bin/
             - name: Run cbfmt check
               # Lua examples in README.md doesn't conform to Stylua rules, on purpose.
-              run: find . -name '*.md' -not -path './dependencies/*' -not -path './README.md' | xargs cbfmt --check
+              run: find . -name '*.md' -not -path './dependencies/*' -not -path './README.md' -not -path './CHANGELOG.md' | xargs cbfmt --check

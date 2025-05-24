@@ -6,9 +6,82 @@ local uv = vim.loop
 ---@alias luv_pipe any
 ---@alias luv_handle any
 
----@class StdioSink
----@field stdout fun(chunk: string)
----@field stderr fun(chunk: string)
+---@class IStdioSink
+local IStdioSink = {}
+---@param chunk string
+function IStdioSink:stdout(chunk) end
+---@param chunk string
+function IStdioSink:stderr(chunk) end
+
+---@class StdioSink : IStdioSink
+---@field stdout_sink? fun(chunk: string)
+---@field stderr_sink? fun(chunk: string)
+local StdioSink = {}
+StdioSink.__index = StdioSink
+
+---@param opts { stdout?: fun(chunk: string), stderr?: fun(chunk: string) }
+function StdioSink:new(opts)
+    ---@type StdioSink
+    local instance = {}
+    setmetatable(instance, self)
+    instance.stdout_sink = opts.stdout
+    instance.stderr_sink = opts.stderr
+    return instance
+end
+
+---@param chunk string
+function StdioSink:stdout(chunk)
+    if self.stdout_sink then
+        self.stdout_sink(chunk)
+    end
+end
+
+---@param chunk string
+function StdioSink:stderr(chunk)
+    if self.stderr_sink then
+        self.stderr_sink(chunk)
+    end
+end
+
+---@class BufferedSink : IStdioSink
+---@field buffers { stdout: string[], stderr: string[] }
+---@field events? EventEmitter
+local BufferedSink = {}
+BufferedSink.__index = BufferedSink
+
+function BufferedSink:new()
+    ---@type BufferedSink
+    local instance = {}
+    setmetatable(instance, self)
+    instance.buffers = {
+        stdout = {},
+        stderr = {},
+    }
+    return instance
+end
+
+---@param events EventEmitter
+function BufferedSink:connect_events(events)
+    self.events = events
+end
+
+---@param chunk string
+function BufferedSink:stdout(chunk)
+    local stdout = self.buffers.stdout
+    stdout[#stdout + 1] = chunk
+    if self.events then
+        self.events:emit("stdout", chunk)
+    end
+end
+
+---@param chunk string
+function BufferedSink:stderr(chunk)
+    local stderr = self.buffers.stderr
+    stderr[#stderr + 1] = chunk
+    if self.events then
+        self.events:emit("stderr", chunk)
+    end
+end
 
 local M = {}
 
@@ -91,7 +164,7 @@ end
 ---@field env string[]? List of "key=value" string.
 ---@field args string[]
 ---@field cwd string
----@field stdio_sink StdioSink
+---@field stdio_sink IStdioSink
 
 ---@param cmd string The command/executable.
 ---@param opts JobSpawnOpts
@@ -151,9 +224,9 @@ function M.spawn(cmd, opts, callback)
     if handle == nil then
         log.fmt_error("Failed to spawn process. cmd=%s, err=%s", cmd, pid_or_err)
         if type(pid_or_err) == "string" and pid_or_err:find "ENOENT" == 1 then
-            opts.stdio_sink.stderr(("Could not find executable %q in path.\n"):format(cmd))
+            opts.stdio_sink:stderr(("Could not find executable %q in PATH.\n"):format(cmd))
         else
-            opts.stdio_sink.stderr(("Failed to spawn process cmd=%s err=%s\n"):format(cmd, pid_or_err))
+            opts.stdio_sink:stderr(("Failed to spawn process cmd=%s err=%s\n"):format(cmd, pid_or_err))
         end
         callback(false)
         return nil, nil, nil
@@ -161,40 +234,14 @@ function M.spawn(cmd, opts, callback)
 
     log.debug("Spawned with pid", pid_or_err)
 
-    stdout:read_start(connect_sink(stdout, opts.stdio_sink.stdout))
-    stderr:read_start(connect_sink(stderr, opts.stdio_sink.stderr))
+    stdout:read_start(connect_sink(stdout, function(...)
+        opts.stdio_sink:stdout(...)
+    end))
+    stderr:read_start(connect_sink(stderr, function(...)
+        opts.stdio_sink:stderr(...)
+    end))
 
     return handle, stdio, pid_or_err
-end
-
-function M.empty_sink()
-    local function noop() end
-    return {
-        stdout = noop,
-        stderr = noop,
-    }
-end
-
-function M.simple_sink()
-    return {
-        stdout = vim.schedule_wrap(vim.api.nvim_out_write),
-        stderr = vim.schedule_wrap(vim.api.nvim_err_write),
-    }
-end
-
-function M.in_memory_sink()
-    local stdout, stderr = {}, {}
-    return {
-        buffers = { stdout = stdout, stderr = stderr },
-        sink = {
-            stdout = function(chunk)
-                stdout[#stdout + 1] = chunk
-            end,
-            stderr = function(chunk)
-                stderr[#stderr + 1] = chunk
-            end,
-        },
-    }
 end
 
 ---@param luv_handle luv_handle
@@ -210,5 +257,8 @@ function M.kill(luv_handle, signal)
     end
     uv.process_kill(luv_handle, signal)
 end
+
+M.StdioSink = StdioSink
+M.BufferedSink = BufferedSink
 
 return M

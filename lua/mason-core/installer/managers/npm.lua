@@ -50,7 +50,7 @@ function M.init()
             end
         end))
 
-        ctx.stdio_sink.stdout "Initialized npm root.\n"
+        ctx.stdio_sink:stdout "Initialized npm root.\n"
     end)
 end
 
@@ -62,12 +62,20 @@ function M.install(pkg, version, opts)
     opts = opts or {}
     log.fmt_debug("npm: install %s %s %s", pkg, version, opts)
     local ctx = installer.context()
-    ctx.stdio_sink.stdout(("Installing npm package %s@%s…\n"):format(pkg, version))
+    ctx.stdio_sink:stdout(("Installing npm package %s@%s…\n"):format(pkg, version))
     return ctx.spawn.npm {
         "install",
         ("%s@%s"):format(pkg, version),
         opts.extra_packages or vim.NIL,
     }
+end
+
+---@async
+---@param pkg string
+function M.uninstall(pkg)
+    local ctx = installer.context()
+    ctx.stdio_sink:stdout(("Uninstalling npm package %s…\n"):format(pkg))
+    return ctx.spawn.npm { "uninstall", pkg }
 end
 
 ---@param exec string

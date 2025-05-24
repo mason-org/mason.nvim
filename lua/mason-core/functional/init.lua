@@ -3,9 +3,7 @@ local _ = {}
 local function lazy_require(module)
     return setmetatable({}, {
         __index = function(m, k)
-            return function(...)
-                return require(module)[k](...)
-            end
+            return require(module)[k]
         end,
     })
 end

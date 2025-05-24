@@ -1,4 +1,5 @@
 local hl_groups = {
+    MasonBackdrop = { bg = "#000000", default = true },
     MasonNormal = { link = "NormalFloat", default = true },
     MasonHeader = { bold = true, fg = "#222222", bg = "#DCA561", default = true },
     MasonHeaderSecondary = { bold = true, fg = "#222222", bg = "#56B6C2", default = true },

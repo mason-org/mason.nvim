@@ -1,3 +1,4 @@
+local InstallLocation = require "mason-core.installer.InstallLocation"
 local Optional = require "mason-core.optional"
 local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
@@ -14,7 +15,6 @@ local parse_checksums = _.compose(_.from_pairs, _.map(_.compose(_.reverse, _.spl
 
 ---@class GitHubRegistrySourceSpec
 ---@field id string
----@field repo string
 ---@field namespace string
 ---@field name string
 ---@field version string?
@@ -30,15 +30,18 @@ local GitHubRegistrySource = {}
 GitHubRegistrySource.__index = GitHubRegistrySource
 
 ---@param spec GitHubRegistrySourceSpec
-function GitHubRegistrySource.new(spec)
-    local root_dir = path.concat { path.registry_prefix(), "github", spec.namespace, spec.name }
-    return setmetatable({
-        id = spec.id,
-        spec = spec,
-        root_dir = root_dir,
-        data_file = path.concat { root_dir, "registry.json" },
-        info_file = path.concat { root_dir, "info.json" },
-    }, GitHubRegistrySource)
+function GitHubRegistrySource:new(spec)
+    ---@type GitHubRegistrySource
+    local instance = {}
+    setmetatable(instance, GitHubRegistrySource)
+    local root_dir = InstallLocation.global():registry(path.concat { "github", spec.namespace, spec.name })
+    instance.id = spec.id
+    instance.spec = spec
+    instance.repo = ("%s/%s"):format(spec.namespace, spec.name)
+    instance.root_dir = root_dir
+    instance.data_file = path.concat { root_dir, "registry.json" }
+    instance.info_file = path.concat { root_dir, "info.json" }
+    return instance
 end
 
 function GitHubRegistrySource:is_installed()
@@ -58,7 +61,7 @@ function GitHubRegistrySource:reload()
     if not self:is_installed() then
         return
     end
-    self.buffer = _.compose(_.index_by(_.prop "name"), _.map(util.hydrate_package(self.buffer or {})))(
+    self.buffer = _.compose(_.index_by(_.prop "name"), _.map(util.hydrate_package(self, self.buffer or {})))(
         self:get_all_package_specs()
     )
     return self.buffer
@@ -76,10 +79,6 @@ end
 
 function GitHubRegistrySource:get_all_package_names()
     return _.map(_.prop "name", self:get_all_package_specs())
-end
-
-function GitHubRegistrySource:get_installer()
-    return Optional.of(_.partial(self.install, self))
 end
 
 ---@async
@@ -103,7 +102,7 @@ function GitHubRegistrySource:install()
             ---@type GitHubRelease
             local release = try(
                 providers.github
-                    .get_latest_release(self.spec.repo)
+                    .get_latest_release(self.repo)
                     :map_err(_.always "Failed to fetch latest registry version from GitHub API.")
             )
             version = release.tag_name
@@ -111,7 +110,7 @@ function GitHubRegistrySource:install()
         end
 
         local zip_file = path.concat { self.root_dir, "registry.json.zip" }
-        try(fetch(settings.current.github.download_url_template:format(self.spec.repo, version, "registry.json.zip"), {
+        try(fetch(settings.current.github.download_url_template:format(self.repo, version, "registry.json.zip"), {
             out_file = zip_file,
         }):map_err(_.always "Failed to download registry archive."))
         local zip_buffer = fs.async.read_file(zip_file)
@@ -123,7 +122,7 @@ function GitHubRegistrySource:install()
         pcall(fs.async.unlink, zip_file)
 
         local checksums = try(
-            fetch(settings.current.github.download_url_template:format(self.spec.repo, version, "checksums.txt")):map_err(
+            fetch(settings.current.github.download_url_template:format(self.repo, version, "checksums.txt")):map_err(
                 _.always "Failed to download checksums.txt."
             )
         )
@@ -155,17 +154,33 @@ end
 function GitHubRegistrySource:get_display_name()
     if self:is_installed() then
         local info = self:get_info()
-        return ("github.com/%s version: %s"):format(self.spec.repo, info.version)
+        return ("github.com/%s version: %s"):format(self.repo, info.version)
     else
-        return ("github.com/%s [uninstalled]"):format(self.spec.repo)
+        return ("github.com/%s [uninstalled]"):format(self.repo)
     end
+end
+
+function GitHubRegistrySource:serialize()
+    local info = self:get_info()
+    return {
+        proto = "github",
+        namespace = self.spec.namespace,
+        name = self.spec.name,
+        version = info.version,
+        checksums = info.checksums,
+    }
+end
+
+---@param other GitHubRegistrySource
+function GitHubRegistrySource:is_same_location(other)
+    return self.spec.namespace == other.spec.namespace and self.spec.name == other.spec.name
 end
 
 function GitHubRegistrySource:__tostring()
     if self.spec.version then
-        return ("GitHubRegistrySource(repo=%s, version=%s)"):format(self.spec.repo, self.spec.version)
+        return ("GitHubRegistrySource(repo=%s, version=%s)"):format(self.repo, self.spec.version)
     else
-        return ("GitHubRegistrySource(repo=%s)"):format(self.spec.repo)
+        return ("GitHubRegistrySource(repo=%s)"):format(self.repo)
     end
 end
 

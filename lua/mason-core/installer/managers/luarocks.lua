@@ -15,7 +15,7 @@ function M.install(pkg, version, opts)
     opts = opts or {}
     log.fmt_debug("luarocks: install %s %s %s", pkg, version, opts)
     local ctx = installer.context()
-    ctx.stdio_sink.stdout(("Installing luarocks package %s@%s…\n"):format(pkg, version))
+    ctx.stdio_sink:stdout(("Installing luarocks package %s@%s…\n"):format(pkg, version))
     ctx:promote_cwd() -- luarocks encodes absolute paths during installation
     return ctx.spawn.luarocks {
         "install",

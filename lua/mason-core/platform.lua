@@ -66,7 +66,7 @@ end)
 
 -- Most of the code that calls into these functions executes outside of the main event loop, where API/fn functions are
 -- disabled. We evaluate these immediately here to avoid issues with main loop synchronization.
-local cached_features = {
+M.cached_features = {
     ["win"] = vim.fn.has "win32",
     ["win32"] = vim.fn.has "win32",
     ["win64"] = vim.fn.has "win64",
@@ -74,6 +74,7 @@ local cached_features = {
     ["darwin"] = vim.fn.has "mac",
     ["unix"] = vim.fn.has "unix",
     ["linux"] = vim.fn.has "linux",
+    ["nvim-0.11"] = vim.fn.has "nvim-0.11",
 }
 
 ---@type fun(env: string): boolean
@@ -104,7 +105,7 @@ local check_env = _.memoize(_.cond {
 M.is = setmetatable({}, {
     __index = function(__, key)
         local os, arch, env = unpack(vim.split(key, "_", { plain = true }))
-        if not cached_features[os] or cached_features[os] ~= 1 then
+        if not M.cached_features[os] or M.cached_features[os] ~= 1 then
             return false
         end
         if arch and arch ~= M.arch then

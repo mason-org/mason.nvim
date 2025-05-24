@@ -3,8 +3,12 @@
 local Failure = {}
 Failure.__index = Failure
 
-function Failure.new(error)
-    return setmetatable({ error = error }, Failure)
+function Failure:new(error)
+    ---@type Failure
+    local instance = {}
+    setmetatable(instance, self)
+    instance.error = error
+    return instance
 end
 
 ---@class Result
@@ -12,18 +16,20 @@ end
 local Result = {}
 Result.__index = Result
 
-function Result.new(value)
-    return setmetatable({
-        value = value,
-    }, Result)
+function Result:new(value)
+    ---@type Result
+    local instance = {}
+    setmetatable(instance, self)
+    instance.value = value
+    return instance
 end
 
 function Result.success(value)
-    return Result.new(value)
+    return Result:new(value)
 end
 
 function Result.failure(error)
-    return Result.new(Failure.new(error))
+    return Result:new(Failure:new(error))
 end
 
 function Result:get_or_nil()

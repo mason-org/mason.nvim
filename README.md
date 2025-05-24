@@ -1,10 +1,12 @@
 ![Linux](https://img.shields.io/badge/Linux-%23.svg?logo=linux&color=FCC624&logoColor=black)
 ![macOS](https://img.shields.io/badge/macOS-%23.svg?logo=apple&color=000000&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-%23.svg?logo=windows&color=0078D6&logoColor=white)
-[![GitHub CI](https://github.com/williamboman/mason.nvim/workflows/Tests/badge.svg)](https://github.com/williamboman/mason.nvim/actions?query=workflow%3ATests+branch%3Amain+event%3Apush)
+[![GitHub CI](https://github.com/mason-org/mason.nvim/workflows/Tests/badge.svg)](https://github.com/mason-org/mason.nvim/actions?query=workflow%3ATests+branch%3Amain+event%3Apush)
 [![Sponsors](https://img.shields.io/github/sponsors/williamboman)](https://github.com/sponsors/williamboman)
 
-<img src="https://user-images.githubusercontent.com/6705160/177613416-0c0354d2-f431-40d8-87f0-21310f0bba0e.png" alt="mason.nvim" />
+<h1>
+    <img src="https://user-images.githubusercontent.com/6705160/177613416-0c0354d2-f431-40d8-87f0-21310f0bba0e.png" alt="mason.nvim" />
+</h1>
 
 <p align="center">
     Portable package manager for Neovim that runs everywhere Neovim runs.<br />
@@ -14,23 +16,21 @@
     <code>:help mason.nvim</code>
 </p>
 <p align="center">
-    <sup>Latest version: v1.10.0</sup> <!-- x-release-please-version -->
+    <sup>Latest version: v2.0.0</sup> <!-- x-release-please-version -->
 </p>
 
-# Table of Contents
+## Table of Contents
 
 -   [Introduction](#introduction)
-    -   [How to use installed packages](#how-to-use-installed-packages)
--   [Screenshots](#screenshots)
+-   [Installation & Usage](#installation--usage)
+    - [Recommended setup for `lazy.nvim`](#recommended-setup-for-lazynvim)
 -   [Requirements](#requirements)
--   [Installation](#installation)
--   [Setup](#setup)
-    -   [Extensions](#extensions)
 -   [Commands](#commands)
 -   [Registries](#registries)
+-   [Screenshots](#screenshots)
 -   [Configuration](#configuration)
 
-# Introduction
+## Introduction
 
 > [`:h mason-introduction`][help-mason-introduction]
 
@@ -40,38 +40,38 @@ with only a small set of [external requirements](#requirements) needed.
 
 Packages are installed in Neovim's data directory ([`:h standard-path`][help-standard-path]) by default. Executables are
 linked to a single `bin/` directory, which `mason.nvim` will add to Neovim's PATH during setup, allowing seamless access
-from Neovim builtins (shell, terminal, etc.) as well as other 3rd party plugins.
+from Neovim builtins (LSP client, shell, terminal, etc.) as well as other 3rd party plugins.
 
 For a list of all available packages, see <https://mason-registry.dev/registry/list>.
 
-## How to use installed packages
+## Installation & Usage
 
-> [`:h mason-how-to-use-packages`][help-mason-how-to-use-packages]
+> [`:h mason-quickstart`][help-mason-quickstart]
 
-Although many packages are perfectly usable out of the box through Neovim builtins, it is recommended to use other 3rd
-party plugins to further integrate these. The following plugins are recommended:
+Install using your plugin manager of choice. **Setup is required**:
 
--   LSP: [`lspconfig`][lspconfig] & [`mason-lspconfig.nvim`][mason-lspconfig.nvim]
--   DAP: [`nvim-dap`][nvim-dap] & [`nvim-dap-ui`][nvim-dap-ui]
--   Linters: [`null-ls.nvim`][null-ls.nvim] or [`nvim-lint`][nvim-lint]
--   Formatters: [`null-ls.nvim`][null-ls.nvim] or [`formatter.nvim`][formatter.nvim]
+```lua
+require("mason").setup()
+```
 
-[formatter.nvim]: https://github.com/mhartington/formatter.nvim
-[lspconfig]: https://github.com/neovim/nvim-lspconfig
-[mason-lspconfig.nvim]: https://github.com/williamboman/mason-lspconfig.nvim
-[null-ls.nvim]: https://github.com/jose-elias-alvarez/null-ls.nvim
-[nvim-dap]: https://github.com/mfussenegger/nvim-dap
-[nvim-dap-ui]: https://github.com/rcarriga/nvim-dap-ui
-[nvim-lint]: https://github.com/mfussenegger/nvim-lint
+`mason.nvim` is optimized to load as little as possible during setup. Lazy-loading the plugin, or somehow deferring the
+setup, is not recommended.
 
-## Screenshots
+Refer to the [Configuration](#configuration) section for information about which settings are available.
 
-|                                                                                                                                                        |                                                                                                                                                  |                                                                                                                                        |
-| :----------------------------------------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------: |
-|           <img alt="Main window" src="https://user-images.githubusercontent.com/6705160/177617680-d62caf26-f253-4ace-ab57-4b590595adca.png">           |                 <img src="https://user-images.githubusercontent.com/6705160/177617684-6bb4c13f-1235-4ac9-829e-120b06f7437b.png">                 | <img alt="Language filter" src="https://user-images.githubusercontent.com/6705160/177617688-8f9ba225-00c8-495c-9c4c-b74240d6f280.png"> |
-| <img alt="LSP server configuration schema" src="https://user-images.githubusercontent.com/6705160/177617692-02c6ddde-a97e-42b4-bca4-4f4caf45d569.png"> | <img alt="Checking for new versions" src="https://user-images.githubusercontent.com/6705160/180648183-69077d10-8795-4da6-ba4d-57ecf0cb25c9.png"> |   <img alt="Help window" src="https://user-images.githubusercontent.com/6705160/180648292-136a0888-0fb6-4226-aa29-53bd3ffed400.png">   |
+### Recommended setup for `lazy.nvim`
 
-# Requirements
+The following is the recommended setup when using `lazy.nvim`. It will set up the plugin for you, meaning **you don't have
+to call `require("mason").setup()` yourself**.
+
+```lua
+{
+    "mason-org/mason.nvim",
+    opts = {}
+}
+```
+
+## Requirements
 
 > [`:h mason-requirements`][help-mason-requirements]
 
@@ -79,10 +79,10 @@ party plugins to further integrate these. The following plugins are recommended:
 `curl`, and `Invoke-WebRequest` are all perfect substitutes).
 The _minimum_ recommended requirements are:
 
--   neovim `>= 0.7.0`
+-   neovim `>= 0.10.0`
 -   For Unix systems:
     -   `git(1)`
-    -   `curl(1)` or `wget(1)`
+    -   `curl(1)` or `GNU wget(1)`
     -   `unzip(1)`
     -   GNU tar (`tar(1)` or `gtar(1)` depending on platform)
     -   `gzip(1)`
@@ -106,50 +106,7 @@ your personal usage, some of these will also need to be installed. Refer to `:ch
 [winzip]: https://www.winzip.com/
 [winrar]: https://www.win-rar.com/
 
-# Installation
-
-## [Packer](https://github.com/wbthomason/packer.nvim)
-
-```lua
-use {
-    "williamboman/mason.nvim"
-}
-```
-
-## [lazy.nvim](https://github.com/folke/lazy.nvim)
-
-```lua
-{
-    "williamboman/mason.nvim"
-}
-```
-
-## [vim-plug](https://github.com/junegunn/vim-plug)
-
-```vim
-Plug 'williamboman/mason.nvim'
-```
-
-# Setup
-
-> [`:h mason-quickstart`][help-mason-quickstart]
-
-```lua
-require("mason").setup()
-```
-
-`mason.nvim` is optimized to load as little as possible during setup. Lazy-loading the plugin, or somehow deferring the
-setup, is not recommended.
-
-Refer to the [Configuration](#configuration) section for information about which settings are available.
-
-## Extensions
-
-Refer to the [Wiki](https://github.com/williamboman/mason.nvim/wiki/Extensions) for a list of 3rd party extensions.
-
--   [`mason-lspconfig.nvim`](https://github.com/williamboman/mason-lspconfig.nvim) - recommended for usage with `lspconfig`
-
-# Commands
+## Commands
 
 > [`:h mason-commands`][help-mason-commands]
 
@@ -160,17 +117,24 @@ Refer to the [Wiki](https://github.com/williamboman/mason.nvim/wiki/Extensions) 
 -   `:MasonUninstallAll` - uninstalls all packages
 -   `:MasonLog` - opens the `mason.nvim` log file in a new tab window
 
-# Registries
+## Registries
 
 Mason's core package registry is located at [mason-org/mason-registry](https://github.com/mason-org/mason-registry).
 Before any packages can be used, the registry needs to be downloaded. This is done automatically for you when using the
 different Mason commands (e.g. `:MasonInstall`), but can also be done manually by using the `:MasonUpdate` command.
 
 If you're utilizing Mason's Lua APIs to access packages, it's recommended to use the
-[`:h mason-registry.refresh()`][help-mason-registry-refresh] and/or [`:h mason-registry.update()`][help-mason-registry-update]
+[`:h mason-registry.refresh()`][help-mason-registry-refresh] or [`:h mason-registry.update()`][help-mason-registry-update]
 functions to ensure you have the latest package information before retrieving packages.
 
-# Configuration
+## Screenshots
+
+|                                                                                                                                                        |                                                                                                                                                  |                                                                                                                                        |
+| :----------------------------------------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------: |
+|           <img alt="Main window" src="https://github.com/user-attachments/assets/b9a57d21-f551-45ad-a1e5-a9fd66291510">           |                 <img alt="Language search" src="https://github.com/user-attachments/assets/3d24fb7b-2c57-4948-923b-0a42bb627cbe">                 | <img alt="Language filter" src="https://github.com/user-attachments/assets/c0ca5818-3c74-4071-bc41-427a2cd1056d"> |
+| <img alt="Package information" src="https://github.com/user-attachments/assets/6f9f6819-ac97-483d-a77c-8f6c6131ac85"> | <img alt="New package versions" src="https://github.com/user-attachments/assets/ff1adc4d-2fcc-46df-ab4c-291c891efa50"> |   <img alt="Help window" src="https://github.com/user-attachments/assets/1fbe75e4-fe69-4417-83e3-82329e1c236e">   |
+
+## Configuration
 
 > [`:h mason-settings`][help-mason-settings]
 
@@ -191,7 +155,24 @@ require("mason").setup({
 })
 ```
 
-## Default configuration
+### Configuration using `lazy.nvim`
+
+```lua
+{
+    "mason-org/mason.nvim",
+    opts = {
+        ui = {
+            icons = {
+                package_installed = "✓",
+                package_pending = "➜",
+                package_uninstalled = "✗"
+            }
+        }
+    }
+}
+```
+
+### Default configuration
 
 ```lua
 ---@class MasonSettings
@@ -267,7 +248,12 @@ local DEFAULT_SETTINGS = {
 
         ---@since 1.0.0
         -- The border to use for the UI window. Accepts same border values as |nvim_open_win()|.
-        border = "none",
+        -- Defaults to `:h 'winborder'` if nil.
+        border = nil,
+
+        ---@since 1.11.0
+        -- The backdrop opacity. 0 is fully opaque, 100 is fully transparent.
+        backdrop = 60,
 
         ---@since 1.0.0
         -- Width of the window. Accepts:
@@ -338,12 +324,11 @@ local DEFAULT_SETTINGS = {
 👋 didn't find what you were looking for? Try looking in the <a href="./doc/mason.txt">help docs</a> <code>:help mason.nvim</code>!
 </sup>
 
-[help-mason-commands]: ./doc/mason.txt#L178
-[help-mason-how-to-use-packages]: ./doc/mason.txt#L153
+[help-mason-commands]: ./doc/mason.txt#L140
 [help-mason-introduction]: ./doc/mason.txt#L11
-[help-mason-quickstart]: ./doc/mason.txt#L67
-[help-mason-registry-refresh]: ./doc/mason.txt#L549
-[help-mason-registry-update]: ./doc/mason.txt#L542
-[help-mason-requirements]: ./doc/mason.txt#L50
-[help-mason-settings]: ./doc/mason.txt#L238
+[help-mason-quickstart]: ./doc/mason.txt#L42
+[help-mason-registry-refresh]: ./doc/mason.txt#L520
+[help-mason-registry-update]: ./doc/mason.txt#L513
+[help-mason-requirements]: ./doc/mason.txt#L25
+[help-mason-settings]: ./doc/mason.txt#L200
 [help-standard-path]: https://neovim.io/doc/user/starting.html#standard-path

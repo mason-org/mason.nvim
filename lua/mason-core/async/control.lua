@@ -4,8 +4,12 @@ local a = require "mason-core.async"
 local Condvar = {}
 Condvar.__index = Condvar
 
-function Condvar.new()
-    return setmetatable({ handles = {} }, Condvar)
+function Condvar:new()
+    ---@type Condvar
+    local instance = {}
+    setmetatable(instance, self)
+    instance.handles = {}
+    return instance
 end
 
 ---@async
@@ -31,8 +35,12 @@ end
 local Permit = {}
 Permit.__index = Permit
 
-function Permit.new(semaphore)
-    return setmetatable({ semaphore = semaphore }, Permit)
+function Permit:new(semaphore)
+    ---@type Permit
+    local instance = {}
+    setmetatable(instance, self)
+    instance.semaphore = semaphore
+    return instance
 end
 
 function Permit:forget()
@@ -42,7 +50,7 @@ function Permit:forget()
     if semaphore.permits > 0 and #semaphore.handles > 0 then
         semaphore.permits = semaphore.permits - 1
         local release = table.remove(semaphore.handles, 1)
-        release(Permit.new(semaphore))
+        release()
     end
 end
 
@@ -51,8 +59,13 @@ local Semaphore = {}
 Semaphore.__index = Semaphore
 
 ---@param permits integer
-function Semaphore.new(permits)
-    return setmetatable({ permits = permits, handles = {} }, Semaphore)
+function Semaphore:new(permits)
+    ---@type Semaphore
+    local instance = {}
+    setmetatable(instance, self)
+    instance.permits = permits
+    instance.handles = {}
+    return instance
 end
 
 ---@async
@@ -60,12 +73,12 @@ function Semaphore:acquire()
     if self.permits > 0 then
         self.permits = self.permits - 1
     else
-        return a.wait(function(resolve)
+        a.wait(function(resolve)
             table.insert(self.handles, resolve)
         end)
     end
 
-    return Permit.new(self)
+    return Permit:new(self)
 end
 
 ---@class OneShotChannel
@@ -75,12 +88,14 @@ end
 local OneShotChannel = {}
 OneShotChannel.__index = OneShotChannel
 
-function OneShotChannel.new()
-    return setmetatable({
-        has_sent = false,
-        value = nil,
-        condvar = Condvar.new(),
-    }, OneShotChannel)
+function OneShotChannel:new()
+    ---@type OneShotChannel
+    local instance = {}
+    setmetatable(instance, self)
+    instance.has_sent = false
+    instance.value = nil
+    instance.condvar = Condvar:new()
+    return instance
 end
 
 function OneShotChannel:is_closed()
@@ -108,12 +123,15 @@ end
 ---@field is_closed boolean
 local Channel = {}
 Channel.__index = Channel
-function Channel.new()
-    return setmetatable({
-        condvar = Condvar.new(),
-        buffer = nil,
-        is_closed = false,
-    }, Channel)
+
+function Channel:new()
+    ---@type Channel
+    local instance = {}
+    setmetatable(instance, self)
+    instance.condvar = Condvar:new()
+    instance.buffer = nil
+    instance.is_closed = false
+    return instance
 end
 
 function Channel:close()

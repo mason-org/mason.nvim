@@ -15,6 +15,16 @@ local function stub_etc_os_release(contents)
 end
 
 describe("platform", function()
+    local snapshot
+
+    before_each(function()
+        snapshot = assert.snapshot()
+    end)
+
+    after_each(function()
+        snapshot:revert()
+    end)
+
     local function platform()
         package.loaded["mason-core.platform"] = nil
         return require "mason-core.platform"

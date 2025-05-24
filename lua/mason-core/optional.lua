@@ -4,18 +4,22 @@ local Optional = {}
 Optional.__index = Optional
 
 ---@param value any
-function Optional.new(value)
-    return setmetatable({ _value = value }, Optional)
+function Optional:new(value)
+    ---@type Optional
+    local instance = {}
+    setmetatable(instance, self)
+    instance._value = value
+    return instance
 end
 
-local EMPTY = Optional.new(nil)
+local EMPTY = Optional:new(nil)
 
 ---@param value any
 function Optional.of_nilable(value)
     if value == nil then
         return EMPTY
     else
-        return Optional.new(value)
+        return Optional:new(value)
     end
 end
 
@@ -25,7 +29,7 @@ end
 
 ---@param value any
 function Optional.of(value)
-    return Optional.new(value)
+    return Optional:new(value)
 end
 
 ---@param mapper_fn fun(value: any): any

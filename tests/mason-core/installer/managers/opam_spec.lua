@@ -1,12 +1,13 @@
-local installer = require "mason-core.installer"
+local match = require "luassert.match"
 local opam = require "mason-core.installer.managers.opam"
 local spy = require "luassert.spy"
+local test_helpers = require "mason-test.helpers"
 
 describe("opam manager", function()
     it("should install", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
 
-        installer.exec_in_context(ctx, function()
+        ctx:execute(function()
             opam.install("opam-package", "1.0.0")
         end)
 
@@ -21,13 +22,15 @@ describe("opam manager", function()
     end)
 
     it("should write output", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         spy.on(ctx.stdio_sink, "stdout")
 
-        installer.exec_in_context(ctx, function()
+        ctx:execute(function()
             opam.install("opam-package", "1.0.0")
         end)
 
-        assert.spy(ctx.stdio_sink.stdout).was_called_with "Installing opam package opam-package@1.0.0…\n"
+        assert
+            .spy(ctx.stdio_sink.stdout)
+            .was_called_with(match.is_ref(ctx.stdio_sink), "Installing opam package opam-package@1.0.0…\n")
     end)
 end)

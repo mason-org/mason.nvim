@@ -1,5 +1,5 @@
-local path = require "mason-core.path"
-local platform = require "mason-core.platform"
+local InstallLocation = require "mason-core.installer.InstallLocation"
+local Registry = require "mason-registry"
 local settings = require "mason.settings"
 
 local M = {}
@@ -20,17 +20,15 @@ function M.setup(config)
     if config then
         settings.set(config)
     end
-    vim.env.MASON = settings.current.install_root_dir
 
-    if settings.current.PATH == "prepend" then
-        vim.env.PATH = path.bin_prefix() .. platform.path_sep .. vim.env.PATH
-    elseif settings.current.PATH == "append" then
-        vim.env.PATH = vim.env.PATH .. platform.path_sep .. path.bin_prefix()
+    local global_location = InstallLocation.global()
+    global_location:set_env { PATH = settings.current.PATH }
+    for _, registry in ipairs(settings.current.registries) do
+        Registry.sources:append(registry)
     end
 
     require "mason.api.command"
     setup_autocmds()
-    require("mason-registry.sources").set_registries(settings.current.registries)
     M.has_setup = true
 end
 

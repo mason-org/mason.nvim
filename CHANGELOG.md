@@ -1,5 +1,235 @@
 # Changelog
 
+## [2.0.0](https://github.com/mason-org/mason.nvim/compare/v1.11.0...v2.0.0) (2025-05-06)
+
+This release has been an ongoing effort for quite some time now and is now ready for release. Most users should not
+experience any breaking changes. If you use any of the Lua APIs that Mason provides you'll find an outline of the
+changes below, breaking changes are marked with `Breaking Change`.
+
+### Repository has been moved
+
+The repository has been transferred to the [`mason-org`](https://github.com/mason-org) organization. The new URL is
+https://github.com/mason-org/mason.nvim. The previous URL will continue to function as a redirect to the new URL but
+users are recommended to update to the new location. 
+
+### Addition of new maintainers ❤️
+
+- [@mehalter](https://github.com/mehalter)
+- [@Conarius](https://github.com/Conarius)
+- [@chrisgrieser](https://github.com/chrisgrieser)
+
+### Features
+- Symlinks now uses relative paths instead of absolute paths.
+- Uninstalled packages now display their available version in the `:Mason` UI.
+- Packages in the `:Mason` UI now display the source [`purl`](https://github.com/package-url/purl-spec).
+- Official support for [custom registries](https://github.com/mason-org/registry-examples).
+- Make registry installations run concurrently.
+- Add support for `'winborder'`.
+- Display current `mason.nvim` version in the `:Mason` UI header.
+
+### Bug Fixes
+- Only attempt unlinking package if the receipt is found.
+- Expand executable paths on Windows before passing to uv_spawn.
+- Fix initializing UI state when using multiple registries.
+- Fix the display of outdated packages in the Mason UI under certain conditions.
+
+### Misc
+- `Breaking Change` Minimum Neovim requirement changed from 0.7.0 to 0.10.0. 
+- `Breaking Change` APIs related to custom packages written in Lua has been removed.
+    - All `require("mason-core.installer.managers")` modules have been removed.
+    - The package structure of Lua packages has changed, refer to [custom
+      registries](https://github.com/mason-org/registry-examples) for information on how to continue using custom
+      packages in Lua.
+
+### Event changes
+
+#### Package
+- `Breaking Change` `install:success` now provides the receipt as payload argument.
+- `Breaking Change` `install:failed` now provides the error as payload argument.
+- `Breaking Change` `uninstall:success` now provides the receipt of the uninstalled package as payload argument.
+- `uninstall:failed` is now emitted when package uninstallation fails.
+
+#### Registry
+- `Breaking Change` `package:install:success` now provides the receipt as payload argument.
+- `Breaking Change` `package:install:failed` now provides the error as payload argument.
+- `Breaking Change` `package:uninstall:success` now provides the receipt of the uninstalled package as payload argument.
+- `package:uninstall:failed` is now emitted when package uninstallation fails.
+- `Breaking Change` `update` is no longer emitted when registry is updated. It's replaced by the following events:
+  - `update:start` when the registry starts updating
+  - `update:success` when the registry is successfully updated
+  - `update:failed` when the registry failed to update
+  - `update:progress` is emitted when the registry update process makes progress when multiple registries are used
+
+### Package API changes
+
+#### `Package:get_install_path()` has been removed.
+`Breaking Change`
+
+This method has been removed to prepare for future changes.
+
+If you're using this method to access an executable, please consider simply using the canonical name of the executable
+as Mason adds these to your `PATH` by default. If you're using the method to access other files inside the package,
+please consider accessing the `$MASON/share` directory instead.
+
+Example:
+
+_Clarification: The `$MASON` environment variable has been available since v1.0.0._
+
+```lua
+-- 1a. There's no need to reach into the package directory via Package:get_install_path() to access the executable
+print(vim.fn.exepath("kotlin-debug-adapter"))
+-- /Users/william/.local/share/nvim/mason/bin/kotlin-debug-adapter
+
+-- 1b. Alternatively if you've configured Mason to not modify PATH
+print(vim.fn.expand("$MASON/bin/kotlin-debug-adapter"))
+-- /Users/william/.local/share/nvim/mason/bin/kotlin-debug-adapter
+
+-- 2. To access other files inside the package directory, consider accessing them via the share/ directory
+vim.print(vim.fn.globpath("$MASON/share/java-debug-adapter", "*.jar", true, true))
+-- { "/Users/william/.local/share/nvim/mason/share/java-debug-adapter/com.microsoft.java.debug.plugin-0.53.1.jar", "/Users/william/.local/share/nvim/mason/share/java-debug-adapter/com.microsoft.java.debug.plugin.jar" }
+
+-- 3. If you absolutely need to access the package directory (please consider raising an issue/PR in the registry if possible)
+print(vim.fn.expand("$MASON/packages/kotlin-debug-adapter/adapter/bin/kotlin-debug-adapter"))
+-- /Users/william/.local/share/nvim/mason/packages/kotlin-debug-adapter/adapter/bin/kotlin-debug-adapter
+```
+
+> [!NOTE]
+> Why was this method removed? The contents of the package directory is not a stable interface and its structure may
+> change without prior notice, for example to host multiple versions of a package. The only stable interfaces on the
+> file system are files available in `bin/`, `share/` and `opt/` - these directories are only subject to breaking
+> changes done by the underlying package itself.
+
+---
+
+#### `Package:uninstall(opts, callback)` is now asynchronous.
+`Breaking Change`
+
+This method now provides an asynchronous interface and accepts two new optional arguments `opts` and `callback`. `opts`
+currently doesn't have any valid values other than an empty Lua table `{}`. `callback` is called when the package is
+uninstalled, successfully or not. While the uninstall mechanism under the hood remains synchronous for the time being it
+is not a guarantee going forward and users are recommended to always use the asynchronous version.
+
+Example:
+
+```lua
+local registry = require("mason-registry")
+local pkg = registry.get_package("lua-language-server")
+
+pkg:uninstall({}, function (success, result)
+    if success then
+        -- Do something on success.
+    else
+        -- Do something on error.
+    end
+end)
+```
+
+---
+
+#### `Package:check_new_version()` has been removed.
+`Breaking Change`
+
+`Package:check_new_version()` is replaced by `Package:get_latest_version()`. `Package:get_latest_version()` is a
+synchronous API.
+
+> [!NOTE]
+> Similarly to before, this function returns the package version provided by the currently installed registry version.
+
+Example:
+```lua
+local registry = require("mason-registry")
+local pkg = registry.get_package("lua-language-server")
+local latest_version = pkg:get_latest_version()
+```
+
+---
+
+#### `Package:get_installed_version()` is now synchronous.
+`Breaking Change`
+
+This function no longer accepts a callback.
+
+Example:
+```lua
+local registry = require("mason-registry")
+local pkg = registry.get_package("lua-language-server")
+if pkg:is_installed() then
+    local installed_version = pkg:get_installed_version()
+end
+```
+
+---
+
+#### `Package:install()` will now error if the package is currently being installed.
+`Breaking Change`
+
+Use the new `Package:is_installing()` method to check whether an installation is already running.
+
+---
+
+#### `Package:uninstall()` will now error if the package is not already installed.
+`Breaking Change`
+
+Use the new `Package:is_installed()` method to check whether the package is installed.
+
+---
+
+#### `Package:install(opts, callback)` now accepts a callback.
+
+This optional callback is called by Mason when package installation finishes, successfully or not.
+
+Example:
+
+```lua
+local registry = require("mason-registry")
+local pkg = registry.get_package("lua-language-server")
+
+pkg:install({}, function (success, result)
+    if success then
+        -- Do something on success.
+    else
+        -- Do something on error.
+    end
+end)
+```
+
+### Custom registries
+
+v2.0.0 introduces official support for custom registries. Currently supported registry protocols are `github:`, `file:`,
+and `lua:`. Lua-based registries have been reworked, please see https://github.com/mason-org/registry-examples for examples. 
+
+Thanks to all sponsors who continue to help finance monthly costs and all 181 contributors of mason.nvim and 246
+contributors of the core registry!
+
+## [1.11.0](https://github.com/williamboman/mason.nvim/compare/v1.10.0...v1.11.0) (2025-02-15)
+
+
+### Features
+
+* **pypi:** improve resolving suitable python version ([#1725](https://github.com/williamboman/mason.nvim/issues/1725)) ([0950b15](https://github.com/williamboman/mason.nvim/commit/0950b15060067f752fde13a779a994f59516ce3d))
+* **ui:** add backdrop ([#1759](https://github.com/williamboman/mason.nvim/issues/1759)) ([0a3a85f](https://github.com/williamboman/mason.nvim/commit/0a3a85fa1a59e0bb0811c87556dee51f027b3358))
+
+
+### Bug Fixes
+
+* avoid calling vim.fn in fast event ([#1878](https://github.com/williamboman/mason.nvim/issues/1878)) ([3a444cb](https://github.com/williamboman/mason.nvim/commit/3a444cb7b0cee6b1e2ed31b7e76f37509075dc46))
+* avoid calling vim.fn.has inside fast event ([#1705](https://github.com/williamboman/mason.nvim/issues/1705)) ([1b3d604](https://github.com/williamboman/mason.nvim/commit/1b3d60405d1d720b2c4927f19672e9479703b00f))
+* fix usage of deprecated Neovim APIs ([#1703](https://github.com/williamboman/mason.nvim/issues/1703)) ([0f1cb65](https://github.com/williamboman/mason.nvim/commit/0f1cb65f436b769733d18b41572f617a1fb41f62))
+* **fs:** fall back to `fs_stat` if entry type is not returned by `fs_readdir` ([#1783](https://github.com/williamboman/mason.nvim/issues/1783)) ([1114b23](https://github.com/williamboman/mason.nvim/commit/1114b2336e917d883c30f89cd63ba94050001b2d))
+* **health:** support multidigit luarocks version numbers ([#1648](https://github.com/williamboman/mason.nvim/issues/1648)) ([751b1fc](https://github.com/williamboman/mason.nvim/commit/751b1fcbf3d3b783fcf8d48865264a9bcd8f9b10))
+* **pypi:** allow access to system site packages by default ([#1584](https://github.com/williamboman/mason.nvim/issues/1584)) ([2be2600](https://github.com/williamboman/mason.nvim/commit/2be2600f9b5a61b0c6109a3fb161b3abe75e5195))
+* **pypi:** exclude python3.12 from candidate list ([#1722](https://github.com/williamboman/mason.nvim/issues/1722)) ([f8ce876](https://github.com/williamboman/mason.nvim/commit/f8ce8768f296717c72b3910eee7bd5ac5223cdb9))
+* **pypi:** prefer stock python3 if it satisfies version requirement ([#1736](https://github.com/williamboman/mason.nvim/issues/1736)) ([f96a318](https://github.com/williamboman/mason.nvim/commit/f96a31855fa8aea55599cea412fe611b85a874ed))
+* **registry:** exhaust streaming parser when loading "file:" registries ([#1708](https://github.com/williamboman/mason.nvim/issues/1708)) ([49ff59a](https://github.com/williamboman/mason.nvim/commit/49ff59aded1047a773670651cfa40e76e63c6377))
+* replace deprecated calls to vim.validate ([#1876](https://github.com/williamboman/mason.nvim/issues/1876)) ([5664dd5](https://github.com/williamboman/mason.nvim/commit/5664dd5deb3ac9527da90691543eb28df51c1ef8))
+* **ui:** fix rendering JSON schemas ([#1757](https://github.com/williamboman/mason.nvim/issues/1757)) ([e2f7f90](https://github.com/williamboman/mason.nvim/commit/e2f7f9044ec30067bc11800a9e266664b88cda22))
+* **ui:** reposition window if border is different than "none" ([#1859](https://github.com/williamboman/mason.nvim/issues/1859)) ([f9f3b46](https://github.com/williamboman/mason.nvim/commit/f9f3b464dda319288b8ce592e53f0d9cf9ca8b4e))
+
+
+### Performance Improvements
+
+* **registry:** significantly improve the "file:" protocol performance ([#1702](https://github.com/williamboman/mason.nvim/issues/1702)) ([098a56c](https://github.com/williamboman/mason.nvim/commit/098a56c385ca3a1a0d4682d129203dda35421b8e))
+
 ## [1.10.0](https://github.com/williamboman/mason.nvim/compare/v1.9.0...v1.10.0) (2024-01-29)
 
 

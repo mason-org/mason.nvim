@@ -1,18 +1,16 @@
-local Optional = require "mason-core.optional"
 local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
 local a = require "mason-core.async"
-local async_control = require "mason-core.async.control"
 local async_uv = require "mason-core.async.uv"
 local fs = require "mason-core.fs"
 local log = require "mason-core.log"
 local path = require "mason-core.path"
+local process = require "mason-core.process"
 local spawn = require "mason-core.spawn"
 local util = require "mason-registry.sources.util"
 
-local Channel = async_control.Channel
-
 ---@class FileRegistrySourceSpec
+---@field id string
 ---@field path string
 
 ---@class FileRegistrySource : RegistrySource
@@ -23,10 +21,13 @@ local FileRegistrySource = {}
 FileRegistrySource.__index = FileRegistrySource
 
 ---@param spec FileRegistrySourceSpec
-function FileRegistrySource.new(spec)
-    return setmetatable({
-        spec = spec,
-    }, FileRegistrySource)
+function FileRegistrySource:new(spec)
+    ---@type FileRegistrySource
+    local instance = {}
+    setmetatable(instance, self)
+    instance.id = spec.id
+    instance.spec = spec
+    return instance
 end
 
 function FileRegistrySource:is_installed()
@@ -43,7 +44,7 @@ function FileRegistrySource:reload(specs)
     self.buffer = _.assoc("specs", specs, self.buffer or {})
     self.buffer.instances = _.compose(
         _.index_by(_.prop "name"),
-        _.map(util.hydrate_package(self.buffer.instances or {}))
+        _.map(util.hydrate_package(self, self.buffer.instances or {}))
     )(self:get_all_package_specs())
     return self.buffer
 end
@@ -63,10 +64,6 @@ end
 
 function FileRegistrySource:get_all_package_names()
     return _.map(_.prop "name", self:get_all_package_specs())
-end
-
-function FileRegistrySource:get_installer()
-    return Optional.of(_.partial(self.install, self))
 end
 
 ---@async
@@ -129,7 +126,7 @@ function FileRegistrySource:install()
             [yq]({
                 "-I0", -- output one document per line
                 { "-o", "json" },
-                stdio_sink = {
+                stdio_sink = process.StdioSink:new {
                     stdout = function(chunk)
                         local raw_spec = streaming_parser(chunk)
                         if raw_spec then
@@ -183,6 +180,18 @@ function FileRegistrySource:get_display_name()
     else
         return ("local: %s [uninstalled]"):format(self.spec.path)
     end
+end
+
+function FileRegistrySource:serialize()
+    return {
+        proto = "file",
+        path = self.id,
+    }
+end
+
+---@param other FileRegistrySource
+function FileRegistrySource:is_same_location(other)
+    return vim.fn.expand(self.spec.path) == vim.fn.expand(other.spec.path)
 end
 
 function FileRegistrySource:__tostring()

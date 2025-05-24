@@ -1,21 +1,31 @@
 local Result = require "mason-core.result"
-local installer = require "mason-core.installer"
 local match = require "luassert.match"
 local npm = require "mason-core.installer.managers.npm"
 local spawn = require "mason-core.spawn"
 local spy = require "luassert.spy"
 local stub = require "luassert.stub"
+local test_helpers = require "mason-test.helpers"
 
 describe("npm manager", function()
+    local snapshot
+
+    before_each(function()
+        snapshot = assert.snapshot()
+    end)
+
+    after_each(function()
+        snapshot:revert()
+    end)
+
     it("should init package.json", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         stub(ctx.fs, "append_file")
         stub(spawn, "npm")
         spawn.npm.returns(Result.success {})
         spawn.npm.on_call_with({ "version", "--json" }).returns(Result.success {
             stdout = [[ { "npm": "8.1.0" } ]],
         })
-        installer.exec_in_context(ctx, function()
+        ctx:execute(function()
             npm.init()
         end)
 
@@ -30,14 +40,14 @@ describe("npm manager", function()
     end)
 
     it("should use install-strategy on npm >= 9", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         stub(ctx.fs, "append_file")
         stub(spawn, "npm")
         spawn.npm.returns(Result.success {})
         spawn.npm.on_call_with({ "version", "--json" }).returns(Result.success {
             stdout = [[ { "npm": "9.1.0" } ]],
         })
-        installer.exec_in_context(ctx, function()
+        ctx:execute(function()
             npm.init()
         end)
 
@@ -51,8 +61,8 @@ describe("npm manager", function()
     end)
 
     it("should install", function()
-        local ctx = create_dummy_context()
-        installer.exec_in_context(ctx, function()
+        local ctx = test_helpers.create_context()
+        ctx:execute(function()
             npm.install("my-package", "1.0.0")
         end)
 
@@ -65,8 +75,8 @@ describe("npm manager", function()
     end)
 
     it("should install extra packages", function()
-        local ctx = create_dummy_context()
-        installer.exec_in_context(ctx, function()
+        local ctx = test_helpers.create_context()
+        ctx:execute(function()
             npm.install("my-package", "1.0.0", {
                 extra_packages = { "extra-package" },
             })
@@ -81,13 +91,15 @@ describe("npm manager", function()
     end)
 
     it("should write output", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         spy.on(ctx.stdio_sink, "stdout")
 
-        installer.exec_in_context(ctx, function()
+        ctx:execute(function()
             npm.install("my-package", "1.0.0")
         end)
 
-        assert.spy(ctx.stdio_sink.stdout).was_called_with "Installing npm package my-package@1.0.0…\n"
+        assert
+            .spy(ctx.stdio_sink.stdout)
+            .was_called_with(match.is_ref(ctx.stdio_sink), "Installing npm package my-package@1.0.0…\n")
     end)
 end)

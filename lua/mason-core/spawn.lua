@@ -10,15 +10,6 @@ local is_not_nil = _.complement(_.equals(vim.NIL))
 ---@alias JobSpawn table<string, async fun(opts: SpawnArgs): Result>
 ---@type JobSpawn
 local spawn = {
-    _aliases = {
-        npm = platform.is.win and "npm.cmd" or "npm",
-        gem = platform.is.win and "gem.cmd" or "gem",
-        composer = platform.is.win and "composer.bat" or "composer",
-        gradlew = platform.is.win and "gradlew.bat" or "gradlew",
-        -- for hererocks installations
-        luarocks = (platform.is.win and vim.fn.executable "luarocks.bat" == 1) and "luarocks.bat" or "luarocks",
-        rebar3 = platform.is.win and "rebar3.cmd" or "rebar3",
-    },
     _flatten_cmd_args = _.compose(_.filter(is_not_nil), _.flatten),
 }
 
@@ -35,10 +26,7 @@ local function Failure(err, cmd)
     }))
 end
 
-local is_executable = _.memoize(function(cmd)
-    a.scheduler()
-    return vim.fn.executable(cmd) == 1
-end, _.identity)
+local has_path = _.any(_.starts_with "PATH=")
 
 ---@class SpawnArgs
 ---@field with_paths string[]? Paths to add to the PATH environment variable.
@@ -47,11 +35,10 @@ end, _.identity)
 ---@field stdio_sink StdioSink? If provided, will be used to write to stdout and stderr.
 ---@field cwd string?
 ---@field on_spawn (fun(handle: luv_handle, stdio: luv_pipe[], pid: integer))? Will be called when the process successfully spawns.
----@field check_executable boolean? Whether to check if the provided command is executable (defaults to true).
 
 setmetatable(spawn, {
-    ---@param normalized_cmd string
-    __index = function(self, normalized_cmd)
+    ---@param canonical_cmd string
+    __index = function(self, canonical_cmd)
         ---@param args SpawnArgs
         return function(args)
             local cmd_args = self._flatten_cmd_args(args)
@@ -70,19 +57,20 @@ setmetatable(spawn, {
                 args = cmd_args,
             }
 
-            local stdio
             if not spawn_args.stdio_sink then
-                stdio = process.in_memory_sink()
-                spawn_args.stdio_sink = stdio.sink
+                spawn_args.stdio_sink = process.BufferedSink:new()
             end
 
-            local cmd = self._aliases[normalized_cmd] or normalized_cmd
+            local cmd = canonical_cmd
 
-            if (env and env.PATH) == nil and args.check_executable ~= false and not is_executable(cmd) then
-                log.fmt_debug("%s is not executable", cmd)
-                return Failure({
-                    stderr = ("%s is not executable"):format(cmd),
-                }, cmd)
+            -- Find the executable path via vim.fn.exepath on Windows because libuv fails to resolve certain executables
+            -- in PATH.
+            if platform.is.win and (spawn_args.env and has_path(spawn_args.env)) == nil then
+                a.scheduler()
+                local expanded_cmd = vim.fn.exepath(canonical_cmd)
+                if expanded_cmd ~= "" then
+                    cmd = expanded_cmd
+                end
             end
 
             local _, exit_code, signal = a.wait(function(resolve)
@@ -93,17 +81,30 @@ setmetatable(spawn, {
             end)
 
             if exit_code == 0 and signal == 0 then
-                return Result.success {
-                    stdout = stdio and table.concat(stdio.buffers.stdout, "") or nil,
-                    stderr = stdio and table.concat(stdio.buffers.stderr, "") or nil,
-                }
+                if getmetatable(spawn_args.stdio_sink) == process.BufferedSink then
+                    local sink = spawn_args.stdio_sink --[[@as BufferedSink]]
+                    return Result.success {
+                        stdout = table.concat(sink.buffers.stdout, "") or nil,
+                        stderr = table.concat(sink.buffers.stderr, "") or nil,
+                    }
+                else
+                    return Result.success()
+                end
             else
-                return Failure({
-                    exit_code = exit_code,
-                    signal = signal,
-                    stdout = stdio and table.concat(stdio.buffers.stdout, "") or nil,
-                    stderr = stdio and table.concat(stdio.buffers.stderr, "") or nil,
-                }, cmd)
+                if getmetatable(spawn_args.stdio_sink) == process.BufferedSink then
+                    local sink = spawn_args.stdio_sink --[[@as BufferedSink]]
+                    return Failure({
+                        exit_code = exit_code,
+                        signal = signal,
+                        stdout = table.concat(sink.buffers.stdout, "") or nil,
+                        stderr = table.concat(sink.buffers.stderr, "") or nil,
+                    }, canonical_cmd)
+                else
+                    return Failure({
+                        exit_code = exit_code,
+                        signal = signal,
+                    }, canonical_cmd)
+                end
             end
         end
     end,

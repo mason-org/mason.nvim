@@ -6,7 +6,7 @@ local installer = require "mason-core.installer"
 local log = require "mason-core.log"
 local path = require "mason-core.path"
 local platform = require "mason-core.platform"
-local powershell = require "mason-core.managers.powershell"
+local powershell = require "mason-core.installer.managers.powershell"
 
 local M = {}
 
@@ -95,7 +95,7 @@ end
 function M.download_file(url, out_file)
     log.fmt_debug("std: downloading file %s", url, out_file)
     local ctx = installer.context()
-    ctx.stdio_sink.stdout(("Downloading file %q…\n"):format(url))
+    ctx.stdio_sink:stdout(("Downloading file %q…\n"):format(url))
     return fetch(url, {
         out_file = path.concat { ctx.cwd:get(), out_file },
     }):map_err(function(err)
@@ -234,7 +234,7 @@ local unpack_by_filename = _.cond {
 function M.unpack(rel_path)
     log.fmt_debug("std: unpack %s", rel_path)
     local ctx = installer.context()
-    ctx.stdio_sink.stdout((("Unpacking %q…\n"):format(rel_path)))
+    ctx.stdio_sink:stdout((("Unpacking %q…\n"):format(rel_path)))
     return unpack_by_filename(rel_path)
 end
 
@@ -246,7 +246,7 @@ function M.clone(git_url, opts)
     opts = opts or {}
     log.fmt_debug("std: clone %s %s", git_url, opts)
     local ctx = installer.context()
-    ctx.stdio_sink.stdout((("Cloning git repository %q…\n"):format(git_url)))
+    ctx.stdio_sink:stdout((("Cloning git repository %q…\n"):format(git_url)))
     return Result.try(function(try)
         try(ctx.spawn.git {
             "clone",

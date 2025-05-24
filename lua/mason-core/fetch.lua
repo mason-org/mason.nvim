@@ -4,11 +4,11 @@ local a = require "mason-core.async"
 local async_uv = require "mason-core.async.uv"
 local log = require "mason-core.log"
 local platform = require "mason-core.platform"
-local powershell = require "mason-core.managers.powershell"
+local powershell = require "mason-core.installer.managers.powershell"
 local spawn = require "mason-core.spawn"
 local version = require "mason.version"
 
-local USER_AGENT = ("mason.nvim %s (+https://github.com/williamboman/mason.nvim)"):format(version.VERSION)
+local USER_AGENT = ("mason.nvim %s (+https://github.com/mason-org/mason.nvim)"):format(version.VERSION)
 
 local TIMEOUT_SECONDS = 30
 

@@ -3,10 +3,9 @@ local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
 local a = require "mason-core.async"
 local control = require "mason-core.async.control"
-local github_client = require "mason-core.managers.github.client"
 local platform = require "mason-core.platform"
 local providers = require "mason-core.providers"
-local registry_sources = require "mason-registry.sources"
+local registry = require "mason-registry"
 local settings = require "mason.settings"
 local spawn = require "mason-core.spawn"
 local version = require "mason.version"
@@ -20,7 +19,7 @@ local report_ok = _.scheduler_wrap(health.ok or health.report_ok)
 local report_warn = _.scheduler_wrap(health.warn or health.report_warn)
 local report_error = _.scheduler_wrap(health.error or health.report_error)
 
-local sem = Semaphore.new(5)
+local sem = Semaphore:new(5)
 
 ---@async
 ---@param opts {cmd:string, args:string[], name: string, use_stderr: boolean?, version_check: (fun(version: string): string?), relaxed: boolean?, advice: string[]}
@@ -67,7 +66,8 @@ end
 
 local function check_registries()
     report_start "mason.nvim [Registries]"
-    for source in registry_sources.iter { include_uninstalled = true } do
+    a.wait(registry.refresh)
+    for source in registry.sources:iterate { include_uninstalled = true } do
         if source:is_installed() then
             report_ok(("Registry `%s` is installed."):format(source:get_display_name()))
         else
@@ -79,51 +79,11 @@ local function check_registries()
     end
 end
 
----@async
-local function check_github()
-    report_start "mason.nvim [GitHub]"
-    github_client
-        .fetch_rate_limit()
-        :on_success(
-            ---@param rate_limit GitHubRateLimitResponse
-            function(rate_limit)
-                a.scheduler()
-                local remaining = rate_limit.resources.core.remaining
-                local used = rate_limit.resources.core.used
-                local limit = rate_limit.resources.core.limit
-                local reset = rate_limit.resources.core.reset
-                local diagnostics = ("Used: %d. Remaining: %d. Limit: %d. Reset: %s."):format(
-                    used,
-                    remaining,
-                    limit,
-                    vim.fn.strftime("%c", reset)
-                )
-                if remaining <= 0 then
-                    report_error(("GitHub API rate limit exceeded. %s"):format(diagnostics))
-                else
-                    local NON_AUTH_LIMIT = 60
-                    if limit > NON_AUTH_LIMIT then
-                        report_ok(("GitHub API rate limit. %s"):format(diagnostics))
-                    else
-                        report_ok(
-                            ("GitHub API rate limit. %s\nInstall and authenticate via gh-cli to increase rate limit."):format(
-                                diagnostics
-                            )
-                        )
-                    end
-                end
-            end
-        )
-        :on_failure(function()
-            report_warn "Failed to check GitHub API rate limit status."
-        end)
-end
-
 local function check_neovim()
-    if vim.fn.has "nvim-0.7.0" == 1 then
-        report_ok "neovim version >= 0.7.0"
+    if vim.fn.has "nvim-0.10.0" == 1 then
+        report_ok "neovim version >= 0.10.0"
     else
-        report_error("neovim version < 0.7.0", { "Upgrade Neovim." })
+        report_error("neovim version < 0.10.0", { "Upgrade Neovim." })
     end
 end
 
@@ -286,7 +246,7 @@ end
 ---@async
 local function check_mason()
     providers.github
-        .get_latest_release("williamboman/mason.nvim")
+        .get_latest_release("mason-org/mason.nvim")
         :on_success(
             ---@param latest_release GitHubRelease
             function(latest_release)
@@ -318,7 +278,6 @@ function M.check()
         check_registries()
         check_core_utils()
         check_languages()
-        check_github()
         a.wait(vim.schedule)
     end)
 end

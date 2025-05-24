@@ -132,11 +132,11 @@ local function GenericHelp(state)
             Ui.HlTextNode {
                 {
                     p.none "- ",
-                    p.highlight "https://github.com/williamboman/mason.nvim/blob/main/CONTRIBUTING.md",
+                    p.highlight "https://github.com/mason-org/mason.nvim/blob/main/CONTRIBUTING.md",
                 },
                 {
                     p.none "- ",
-                    p.highlight "https://github.com/williamboman/mason.nvim/blob/main/doc/reference.md",
+                    p.highlight "https://github.com/mason-org/mason.nvim/blob/main/doc/reference.md",
                 },
             },
         }),

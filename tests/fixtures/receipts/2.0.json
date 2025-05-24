@@ -1,0 +1,40 @@
+{
+  "links": {
+    "bin": {
+      "ngserver": "node_modules/.bin/ngserver"
+    },
+    "share": {},
+    "opt": {}
+  },
+  "name": "angular-language-server",
+  "schema_version": "2.0",
+  "metrics": {
+    "start_time": 1739692587948,
+    "completion_time": 1739692591360
+  },
+  "source": {
+    "id": "pkg:npm/%40angular/language-server@19.1.0",
+    "raw": {
+      "id": "pkg:npm/%40angular/language-server@19.1.0",
+      "extra_packages": [
+        "typescript@5.4.5"
+      ]
+    },
+    "type": "registry+v1"
+  },
+  "install_options": {
+    "debug": false,
+    "strict": false,
+    "force": false
+  },
+  "registry": {
+    "name": "mason-registry",
+    "version": "2025-05-03-lawful-clave",
+    "checksums": {
+      "registry.json": "4ae083fe8e50d0bea5382be05c7ede8d2def55ff2b6b89dc129b153039d9f2a2",
+      "registry.json.zip": "2116d5db7676afe7052de329db4dfbf656054d8c35ce12414eb9d58561b2fde9"
+    },
+    "proto": "github",
+    "namespace": "mason-org"
+  }
+}

@@ -170,13 +170,10 @@ M._render_node = render_node
 
 ---@alias WindowOpts { effects?: table<string, fun()>, winhighlight?: string[], border?: string|table }
 
----@param size integer | float
+---@param size number
 ---@param viewport integer
 local function calc_size(size, viewport)
-    if size <= 1 then
-        return math.ceil(size * viewport)
-    end
-    return math.min(size, viewport)
+    return size > 1 and math.min(size, viewport) or math.floor(size * viewport)
 end
 
 ---@param opts WindowOpts
@@ -188,6 +185,11 @@ local function create_popup_window_opts(opts, sizes_only)
     local width = calc_size(settings.current.ui.width, columns)
     local row = math.floor((lines - height) / 2)
     local col = math.floor((columns - width) / 2)
+    if opts.border ~= "none" and opts.border ~= "" then
+        row = math.max(row - 1, 0)
+        col = math.max(col - 1, 0)
+    end
+
     local popup_layout = {
         height = height,
         width = width,
@@ -205,16 +207,30 @@ local function create_popup_window_opts(opts, sizes_only)
     return popup_layout
 end
 
+local function create_backdrop_window_opts()
+    return {
+        relative = "editor",
+        width = vim.o.columns,
+        height = vim.o.lines,
+        row = 0,
+        col = 0,
+        style = "minimal",
+        focusable = false,
+        border = "none",
+        zindex = 44,
+    }
+end
+
 ---@param name string Human readable identifier.
 ---@param filetype string
 function M.new_view_only_win(name, filetype)
     local namespace = vim.api.nvim_create_namespace(("installer_%s"):format(name))
-    local bufnr, renderer, mutate_state, get_state, unsubscribe, win_id, window_mgmt_augroup, autoclose_augroup, registered_keymaps, registered_keybinds, registered_effect_handlers, sticky_cursor
+    local bufnr, backdrop_bufnr, renderer, mutate_state, get_state, unsubscribe, win_id, backdrop_win_id, window_mgmt_augroup, autoclose_augroup, registered_keymaps, registered_keybinds, registered_effect_handlers, sticky_cursor
     local has_initiated = false
     ---@type WindowOpts
     local window_opts = {}
 
-    local events = EventEmitter.new()
+    local events = EventEmitter:new()
 
     vim.diagnostic.config({
         virtual_text = {
@@ -226,7 +242,7 @@ function M.new_view_only_win(name, filetype)
         virtual_lines = false,
     }, namespace)
 
-    local function delete_win_buf()
+    local function close_window()
         -- We queue the win_buf to be deleted in a schedule call, otherwise when used with folke/which-key (and
         -- set timeoutlen=0) we run into a weird segfault.
         -- It should probably be unnecessary once https://github.com/neovim/neovim/issues/15548 is resolved
@@ -234,10 +250,6 @@ function M.new_view_only_win(name, filetype)
             if win_id and vim.api.nvim_win_is_valid(win_id) then
                 log.trace "Deleting window"
                 vim.api.nvim_win_close(win_id, true)
-            end
-            if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
-                log.trace "Deleting buffer"
-                vim.api.nvim_buf_delete(bufnr, { force = true })
             end
         end)
     end
@@ -371,6 +383,21 @@ function M.new_view_only_win(name, filetype)
         bufnr = vim.api.nvim_create_buf(false, true)
         win_id = vim.api.nvim_open_win(bufnr, true, create_popup_window_opts(window_opts, false))
 
+        local normal_hl = vim.api.nvim_get_hl and vim.api.nvim_get_hl(0, { name = "Normal" })
+        local is_nvim_transparent = normal_hl and normal_hl.bg == nil
+
+        if settings.current.ui.backdrop ~= 100 and vim.o.termguicolors and not is_nvim_transparent then
+            backdrop_bufnr = vim.api.nvim_create_buf(false, true)
+            backdrop_win_id = vim.api.nvim_open_win(backdrop_bufnr, false, create_backdrop_window_opts())
+
+            vim.wo[backdrop_win_id].winhighlight = "Normal:MasonBackdrop"
+            vim.wo[backdrop_win_id].winblend = settings.current.ui.backdrop
+            vim.bo[backdrop_bufnr].buftype = "nofile"
+            -- https://github.com/folke/lazy.nvim/issues/1399
+            vim.bo[backdrop_bufnr].filetype = "mason_backdrop"
+            vim.bo[backdrop_bufnr].bufhidden = "wipe"
+        end
+
         vim.api.nvim_create_autocmd("CmdLineEnter", {
             buffer = bufnr,
             callback = function()
@@ -438,9 +465,22 @@ function M.new_view_only_win(name, filetype)
             group = window_mgmt_augroup,
             buffer = bufnr,
             callback = function()
-                if vim.api.nvim_win_is_valid(win_id) then
+                if win_id and vim.api.nvim_win_is_valid(win_id) then
                     draw(renderer(get_state()))
                     vim.api.nvim_win_set_config(win_id, create_popup_window_opts(window_opts, true))
+                end
+                if backdrop_win_id and vim.api.nvim_win_is_valid(backdrop_win_id) then
+                    vim.api.nvim_win_set_config(backdrop_win_id, create_backdrop_window_opts())
+                end
+            end,
+        })
+
+        vim.api.nvim_create_autocmd({ "WinClosed" }, {
+            once = true,
+            pattern = tostring(win_id),
+            callback = function()
+                if backdrop_win_id and vim.api.nvim_win_is_valid(backdrop_win_id) then
+                    vim.api.nvim_win_close(backdrop_win_id, true)
                 end
             end,
         })
@@ -448,17 +488,13 @@ function M.new_view_only_win(name, filetype)
         vim.api.nvim_create_autocmd({ "BufHidden", "BufUnload" }, {
             group = autoclose_augroup,
             buffer = bufnr,
-            callback = function()
-                -- Schedule is done because otherwise the window won't actually close in some cases (for example if
-                -- you're loading another buffer into it)
-                vim.schedule(function()
-                    if vim.api.nvim_win_is_valid(win_id) then
-                        vim.api.nvim_win_close(win_id, true)
-                    end
-                end)
-            end,
+            -- This is for instances where the window remains but the buffer is no longer visible, for example when
+            -- loading another buffer into it (this is basically imitating 'winfixbuf', which was added in 0.10.0).
+            callback = close_window,
         })
 
+        -- This autocmd is responsible for closing the Mason window(s) when the user focuses another window. It
+        -- essentially behaves as WinLeave except it keeps the Mason window(s) open under certain circumstances.
         local win_enter_aucmd
         win_enter_aucmd = vim.api.nvim_create_autocmd({ "WinEnter" }, {
             group = autoclose_augroup,
@@ -467,7 +503,7 @@ function M.new_view_only_win(name, filetype)
                 local buftype = vim.api.nvim_buf_get_option(0, "buftype")
                 -- This allows us to keep the floating window open for things like diagnostic popups, UI inputs á la dressing.nvim, etc.
                 if buftype ~= "prompt" and buftype ~= "nofile" then
-                    delete_win_buf()
+                    close_window()
                     vim.api.nvim_del_autocmd(win_enter_aucmd)
                 end
             end,
@@ -525,7 +561,7 @@ function M.new_view_only_win(name, filetype)
             assert(has_initiated, "Display has not been initiated, cannot close.")
             unsubscribe(true)
             log.fmt_trace("Closing window win_id=%s, bufnr=%s", win_id, bufnr)
-            delete_win_buf()
+            close_window()
             vim.api.nvim_del_augroup_by_id(window_mgmt_augroup)
             vim.api.nvim_del_augroup_by_id(autoclose_augroup)
         end),

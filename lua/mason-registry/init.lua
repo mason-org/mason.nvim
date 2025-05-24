@@ -1,227 +1,180 @@
 local EventEmitter = require "mason-core.EventEmitter"
-local Optional = require "mason-core.optional"
-local _ = require "mason-core.functional"
-local fs = require "mason-core.fs"
+local InstallLocation = require "mason-core.installer.InstallLocation"
 local log = require "mason-core.log"
-local path = require "mason-core.path"
-local sources = require "mason-registry.sources"
+local uv = vim.loop
+local LazySourceCollection = require "mason-registry.sources"
 
----@class RegistrySource
----@field id string
----@field get_package fun(self: RegistrySource, pkg_name: string): Package?
----@field get_all_package_names fun(self: RegistrySource): string[]
----@field get_all_package_specs fun(self: RegistrySource): PackageSpec[] | RegistryPackageSpec[]
----@field get_display_name fun(self: RegistrySource): string
----@field is_installed fun(self: RegistrySource): boolean
----@field get_installer fun(self: RegistrySource): Optional # Optional<async fun (): Result>
+-- singleton
+local Registry = EventEmitter:new()
 
----@class MasonRegistry : EventEmitter
----@diagnostic disable-next-line: assign-type-mismatch
-local M = setmetatable({}, { __index = EventEmitter })
-EventEmitter.init(M)
+Registry.sources = LazySourceCollection:new()
+---@type table<string, string[]>
+Registry.aliases = {}
 
-local scan_install_root
-
-do
-    ---@type table<string, true>?
-    local cached_dirs
-
-    local get_directories = _.compose(
-        _.set_of,
-        _.filter_map(function(entry)
-            if entry.type == "directory" then
-                return Optional.of(entry.name)
-            else
-                return Optional.empty()
-            end
-        end)
-    )
-
-    ---@return table<string, true>
-    scan_install_root = function()
-        if cached_dirs then
-            return cached_dirs
-        end
-        log.trace "Scanning installation root dir"
-        local ok, entries = pcall(fs.sync.readdir, path.package_prefix())
-        if not ok then
-            log.debug("Failed to scan installation root dir", entries)
-            -- presume installation root dir has not been created yet (i.e., no packages installed)
-            return {}
-        end
-        cached_dirs = get_directories(entries)
-        vim.schedule(function()
-            cached_dirs = nil
-        end)
-        log.trace("Resolved installation root dirs", cached_dirs)
-        return cached_dirs
-    end
+---@param pkg_name string
+function Registry.is_installed(pkg_name)
+    local stat = uv.fs_stat(InstallLocation.global():package(pkg_name))
+    return stat ~= nil and stat.type == "directory"
 end
 
----Checks whether the provided package name is installed.
----In many situations, this is a more efficient option than the Package:is_installed() method due to a smaller amount of
----modules required to load.
----@param package_name string
-function M.is_installed(package_name)
-    return scan_install_root()[package_name] == true
-end
-
----Returns an instance of the Package class if the provided package name exists. This function errors if a package cannot be found.
----@param package_name string
+---Returns an instance of the Package class if the provided package name exists. This function errors if a package
+---cannot be found.
+---@param pkg_name string
 ---@return Package
-function M.get_package(package_name)
-    for source in sources.iter() do
-        local pkg = source:get_package(package_name)
+function Registry.get_package(pkg_name)
+    for source in Registry.sources:iterate() do
+        local pkg = source:get_package(pkg_name)
         if pkg then
             return pkg
         end
     end
-    log.fmt_error("Cannot find package %q.", package_name)
-    error(("Cannot find package %q."):format(package_name))
+    log.fmt_error("Cannot find package %q.", pkg_name)
+    error(("Cannot find package %q."):format(pkg_name))
 end
 
----Returns true if the provided package_name can be found in the registry.
----@param package_name string
----@return boolean
-function M.has_package(package_name)
-    local ok = pcall(M.get_package, package_name)
+function Registry.has_package(pkg_name)
+    local ok = pcall(Registry.get_package, pkg_name)
     return ok
 end
 
-local get_packages = _.map(M.get_package)
-
----Returns all installed package names. This is a fast function that doesn't load any extra modules.
----@return string[]
-function M.get_installed_package_names()
-    return _.keys(scan_install_root())
+function Registry.get_installed_package_names()
+    local fs = require "mason-core.fs"
+    if not fs.sync.dir_exists(InstallLocation.global():package()) then
+        return {}
+    end
+    local entries = fs.sync.readdir(InstallLocation:global():package())
+    local directories = {}
+    for _, entry in ipairs(entries) do
+        if entry.type == "directory" then
+            directories[#directories + 1] = entry.name
+        end
+    end
+    -- TODO: validate that entry is a mason package
+    return directories
 end
 
----Returns all installed package instances. This is a slower function that loads more modules.
----@return Package[]
-function M.get_installed_packages()
-    return get_packages(M.get_installed_package_names())
+function Registry.get_installed_packages()
+    return vim.tbl_map(Registry.get_package, Registry.get_installed_package_names())
 end
 
----Returns all package names. This is a fast function that doesn't load any extra modules.
----@return string[]
-function M.get_all_package_names()
+function Registry.get_all_package_names()
     local pkgs = {}
-    for source in sources.iter() do
+    for source in Registry.sources:iterate() do
         for _, name in ipairs(source:get_all_package_names()) do
             pkgs[name] = true
         end
     end
-    return _.keys(pkgs)
+    return vim.tbl_keys(pkgs)
 end
 
----Returns all package instances. This is a slower function that loads more modules.
----@return Package[]
-function M.get_all_packages()
-    return get_packages(M.get_all_package_names())
+function Registry.get_all_packages()
+    return vim.tbl_map(Registry.get_package, Registry.get_all_package_names())
 end
 
----@return (RegistryPackageSpec | PackageSpec)[]
-function M.get_all_package_specs()
+function Registry.get_all_package_specs()
     local specs = {}
-    for source in sources.iter() do
-        vim.list_extend(specs, source:get_all_package_specs())
-    end
-    return _.uniq_by(_.prop "name", specs)
-end
-
-local STATE_FILE = path.concat {
-    vim.fn.stdpath((vim.fn.has "nvim-0.8.0" == 1) and "state" or "cache"),
-    "mason-registry-update",
-}
-
----@param time integer
-local function get_store_age(time)
-    local checksum = sources.checksum()
-    if fs.sync.file_exists(STATE_FILE) then
-        local parse_state_file =
-            _.compose(_.evolve { timestamp = tonumber }, _.zip_table { "checksum", "timestamp" }, _.split "\n")
-        local state = parse_state_file(fs.sync.read_file(STATE_FILE))
-        if checksum == state.checksum then
-            return math.abs(time - state.timestamp)
-        end
-    end
-    return time
-end
-
----@param time integer
-local function update_store_timestamp(time)
-    local dir = vim.fn.fnamemodify(STATE_FILE, ":h")
-    if not fs.sync.dir_exists(dir) then
-        fs.sync.mkdirp(dir)
-    end
-    fs.sync.write_file(STATE_FILE, _.join("\n", { sources.checksum(), tostring(time) }))
-end
-
----@param callback? fun(success: boolean, updated_registries: RegistrySource[])
-function M.update(callback)
-    local a = require "mason-core.async"
-
-    return a.run(require("mason-registry.installer").run, function(success, result)
-        if not callback then
-            return
-        end
-        if not success then
-            return callback(false, result)
-        end
-        result
-            :on_success(function(value)
-                callback(true, value)
-            end)
-            :on_failure(function(err)
-                callback(false, err)
-            end)
-    end)
-end
-
-local REGISTRY_STORE_TTL = 86400 -- 24 hrs
-
----@param cb? fun()
-function M.refresh(cb)
-    local a = require "mason-core.async"
-
-    ---@async
-    local function refresh()
-        a.scheduler()
-        local is_outdated = get_store_age(os.time()) > REGISTRY_STORE_TTL
-        if is_outdated or not sources.is_installed() then
-            if a.wait(M.update) then
-                a.scheduler()
-                update_store_timestamp(os.time())
+    for source in Registry.sources:iterate() do
+        for _, spec in ipairs(source:get_all_package_specs()) do
+            if not specs[spec.name] then
+                specs[spec.name] = spec
             end
         end
     end
-
-    if not cb then
-        a.run_blocking(refresh)
-    else
-        a.run(refresh, cb)
-    end
+    return vim.tbl_values(specs)
 end
-
----@type table<string, string[]>
-local aliases = {}
 
 ---Register aliases for the specified packages
 ---@param new_aliases table<string, string[]>
-function M.register_package_aliases(new_aliases)
+function Registry.register_package_aliases(new_aliases)
     for pkg_name, pkg_aliases in pairs(new_aliases) do
-        aliases[pkg_name] = aliases[pkg_name] or {}
+        Registry.aliases[pkg_name] = Registry.aliases[pkg_name] or {}
         for _, alias in pairs(pkg_aliases) do
             if alias ~= pkg_name then
-                table.insert(aliases[pkg_name], alias)
+                table.insert(Registry.aliases[pkg_name], alias)
             end
         end
     end
 end
 
 ---@param name string
-function M.get_package_aliases(name)
-    return aliases[name] or {}
+function Registry.get_package_aliases(name)
+    return Registry.aliases[name] or {}
 end
 
-return M
+---@param callback? fun(success: boolean, updated_registries: RegistrySource[])
+function Registry.update(callback)
+    local a = require "mason-core.async"
+    local installer = require "mason-registry.installer"
+    local noop = function() end
+
+    a.run(function()
+        if installer.channel then
+            log.debug "Registry update already in progress."
+            return installer.channel:receive():get_or_throw()
+        else
+            log.debug "Updating the registry."
+            Registry:emit("update:start", Registry.sources)
+            return installer
+                .install(Registry.sources, function(finished, all)
+                    Registry:emit("update:progress", finished, all)
+                end)
+                :on_success(function(updated_registries)
+                    log.fmt_debug("Successfully updated %d registries.", #updated_registries)
+                    Registry:emit("update:success", updated_registries)
+                end)
+                :on_failure(function(errors)
+                    log.error("Failed to update registries.", errors)
+                    Registry:emit("update:failed", errors)
+                end)
+                :get_or_throw()
+        end
+    end, callback or noop)
+end
+
+local REGISTRY_STORE_TTL = 86400 -- 24 hrs
+
+---@param callback? fun(success: boolean, updated_registries: RegistrySource[])
+function Registry.refresh(callback)
+    log.debug "Refreshing the registry."
+    local a = require "mason-core.async"
+    local installer = require "mason-registry.installer"
+
+    local state = installer.get_registry_state()
+    if state and Registry.sources:is_all_installed() then
+        local registry_age = os.time() - state.timestamp
+
+        if registry_age <= REGISTRY_STORE_TTL and state.checksum == Registry.sources:checksum() then
+            log.fmt_debug(
+                "Registry refresh is not necessary yet. Registry age=%d, checksum=%s",
+                registry_age,
+                state.checksum
+            )
+            if callback then
+                callback(true, {})
+            end
+            return
+        end
+    end
+
+    local function async_update()
+        return a.wait(function(resolve, reject)
+            Registry.update(function(success, result)
+                if success then
+                    resolve(result)
+                else
+                    reject(result)
+                end
+            end)
+        end)
+    end
+
+    if not callback then
+        -- We don't want to error in the synchronous version because of how this function is recommended to be used in
+        -- 3rd party code. If accessing the update result is required, users are recommended to pass a callback.
+        pcall(a.run_blocking, async_update)
+    else
+        a.run(async_update, callback)
+    end
+end
+
+return Registry

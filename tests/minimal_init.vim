@@ -13,7 +13,22 @@ set packpath=$dependencies
 packloadall
 
 lua require("luassertx")
-lua require("test_helpers")
+
+lua <<EOF
+mockx = {
+    just_runs = function() end,
+    returns = function(val)
+        return function()
+            return val
+        end
+    end,
+    throws = function(exception)
+        return function()
+            error(exception, 2)
+        end
+    end,
+}
+EOF
 
 lua <<EOF
 local path = require "mason-core.path"
@@ -25,6 +40,8 @@ require("mason").setup {
         "lua:dummy-registry.index"
     }
 }
+
+require("mason-registry").refresh()
 EOF
 
 function! RunTests() abort

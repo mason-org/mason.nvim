@@ -5,7 +5,7 @@ local async_uv = require "mason-core.async.uv"
 local installer = require "mason-core.installer"
 local log = require "mason-core.log"
 local platform = require "mason-core.platform"
-local powershell = require "mason-core.managers.powershell"
+local powershell = require "mason-core.installer.managers.powershell"
 local std = require "mason-core.installer.managers.std"
 
 local M = {}

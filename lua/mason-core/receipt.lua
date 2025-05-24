@@ -3,72 +3,107 @@ local M = {}
 ---@alias InstallReceiptSchemaVersion
 ---| '"1.0"'
 ---| '"1.1"'
+---| '"2.0"'
 
----@alias InstallReceiptSourceType
----| '"npm"'
----| '"pip3"'
----| '"gem"'
----| '"go"'
----| '"cargo"'
----| '"opam"'
----| '"dotnet"'
----| '"unmanaged"'
----| '"system"'
----| '"jdtls"'
----| '"git"'
----| '"github_tag"'
----| '"github_release"'
----| '"github_release_file"'
-
----@alias InstallReceiptSource {type: InstallReceiptSourceType}
+---@alias InstallReceiptSource {type: RegistryPackageSpecSchema, id: string, raw: RegistryPackageSource}
 
 ---@class InstallReceiptLinks
 ---@field bin? table<string, string>
 ---@field share? table<string, string>
 ---@field opt? table<string, string>
 
----@class InstallReceipt<T> : { primary_source: T }
----@field public name string
----@field public schema_version InstallReceiptSchemaVersion
----@field public metrics {start_time:integer, completion_time:integer}
----@field public primary_source InstallReceiptSource
----@field public secondary_sources InstallReceiptSource[]
----@field public links InstallReceiptLinks
+---@alias InstallReceiptRegistry { proto: '"github"' | '"lua"' | '"file"' }
+
+---@class InstallReceipt
+---@field name string
+---@field schema_version InstallReceiptSchemaVersion
+---@field metrics {start_time:integer, completion_time:integer}
+---@field source InstallReceiptSource
+---@field links InstallReceiptLinks
+---@field install_options PackageInstallOpts
+---@field registry InstallReceiptRegistry
 local InstallReceipt = {}
 InstallReceipt.__index = InstallReceipt
 
-function InstallReceipt.new(data)
-    return setmetatable(data, InstallReceipt)
+function InstallReceipt:new(data)
+    return setmetatable(data, self)
 end
 
 function InstallReceipt.from_json(json)
-    return InstallReceipt.new(json)
+    return InstallReceipt:new(json)
 end
 
----@async
----@param cwd string
-function InstallReceipt:write(cwd)
-    local path = require "mason-core.path"
-    local fs = require "mason-core.fs"
-    fs.async.write_file(path.concat { cwd, "mason-receipt.json" }, vim.json.encode(self))
+function InstallReceipt:__tostring()
+    return ("InstallReceipt(name=%s, purl=%s)"):format(self.name, self:get_source().id or "N/A")
+end
+
+function InstallReceipt:get_name()
+    return self.name
+end
+
+function InstallReceipt:get_schema_version()
+    return self.schema_version
+end
+
+---@param version string
+function InstallReceipt:is_schema_min(version)
+    local semver = require "mason-vendor.semver"
+    return semver(self.schema_version) >= semver(version)
+end
+
+---@return InstallReceiptSource
+function InstallReceipt:get_source()
+    if self:is_schema_min "2.0" then
+        return self.source
+    end
+    return self.primary_source --[[@as InstallReceiptSource]]
+end
+
+---@return string?
+function InstallReceipt:get_installed_purl()
+    local source = self:get_source()
+    return source.id
+end
+
+function InstallReceipt:get_raw_source()
+    if self:is_schema_min "2.0" then
+        return self.source.raw
+    else
+        return nil
+    end
+end
+
+function InstallReceipt:get_registry()
+    return self.registry
+end
+
+function InstallReceipt:get_install_options()
+    return self.install_options
+end
+
+function InstallReceipt:get_links()
+    return self.links
+end
+
+function InstallReceipt:to_json()
+    return vim.json.encode(self)
 end
 
 ---@class InstallReceiptBuilder
----@field private secondary_sources InstallReceiptSource[]
----@field private links InstallReceiptLinks
----@field private epoch_time number
+---@field links InstallReceiptLinks
 local InstallReceiptBuilder = {}
 InstallReceiptBuilder.__index = InstallReceiptBuilder
 
-function InstallReceiptBuilder.new()
-    return setmetatable({
-        secondary_sources = {},
-        links = {
-            bin = vim.empty_dict(),
-            share = vim.empty_dict(),
-            opt = vim.empty_dict(),
-        },
-    }, InstallReceiptBuilder)
+function InstallReceiptBuilder:new()
+    ---@type InstallReceiptBuilder
+    local instance = {}
+    setmetatable(instance, self)
+    instance.links = {
+        bin = vim.empty_dict(),
+        share = vim.empty_dict(),
+        opt = vim.empty_dict(),
+    }
+    return instance
 end
 
 ---@param name string
@@ -77,21 +112,15 @@ function InstallReceiptBuilder:with_name(name)
     return self
 end
 
----@param version InstallReceiptSchemaVersion
-function InstallReceiptBuilder:with_schema_version(version)
-    self.schema_version = version
+---@param source InstallReceiptSource
+function InstallReceiptBuilder:with_source(source)
+    self.source = source
     return self
 end
 
----@param source InstallReceiptSource
-function InstallReceiptBuilder:with_primary_source(source)
-    self.primary_source = source
-    return self
-end
-
----@param source InstallReceiptSource
-function InstallReceiptBuilder:with_secondary_source(source)
-    table.insert(self.secondary_sources, source)
+---@param install_options PackageInstallOpts
+function InstallReceiptBuilder:with_install_options(install_options)
+    self.install_options = install_options
     return self
 end
 
@@ -126,68 +155,31 @@ function InstallReceiptBuilder:with_start_time(seconds, microseconds)
     return self
 end
 
+---@param registry InstallReceiptRegistry
+function InstallReceiptBuilder:with_registry(registry)
+    self.registry = registry
+    return self
+end
+
 function InstallReceiptBuilder:build()
     assert(self.name, "name is required")
-    assert(self.schema_version, "schema_version is required")
     assert(self.start_time, "start_time is required")
     assert(self.completion_time, "completion_time is required")
-    assert(self.primary_source, "primary_source is required")
-    return InstallReceipt.new {
+    assert(self.source, "source is required")
+    assert(self.install_options, "install_options is required")
+    assert(self.registry, "registry is required")
+    return InstallReceipt:new {
         name = self.name,
-        schema_version = self.schema_version,
+        schema_version = "2.0",
         metrics = {
             start_time = self.start_time,
             completion_time = self.completion_time,
         },
-        primary_source = self.primary_source,
-        secondary_sources = self.secondary_sources,
+        install_options = self.install_options,
+        source = self.source,
+        registry = self.registry,
         links = self.links,
     }
-end
-
----@class InstallReceiptPackageSource
----@field type string
----@field package string
-
----@param type InstallReceiptSourceType
-local function package_source(type)
-    ---@param pkg string
-    ---@return InstallReceiptPackageSource
-    return function(pkg)
-        return { type = type, package = pkg }
-    end
-end
-
-InstallReceiptBuilder.npm = package_source "npm"
-InstallReceiptBuilder.pip3 = package_source "pip3"
-InstallReceiptBuilder.gem = package_source "gem"
-InstallReceiptBuilder.go = package_source "go"
-InstallReceiptBuilder.dotnet = package_source "dotnet"
-InstallReceiptBuilder.cargo = package_source "cargo"
-InstallReceiptBuilder.composer = package_source "composer"
-InstallReceiptBuilder.opam = package_source "opam"
-InstallReceiptBuilder.luarocks = package_source "luarocks"
-
-InstallReceiptBuilder.unmanaged = { type = "unmanaged" }
-
----@param repo string
----@param release string
-function InstallReceiptBuilder.github_release(repo, release)
-    return {
-        type = "github_release",
-        repo = repo,
-        release = release,
-    }
-end
-
----@param dependency string
-function InstallReceiptBuilder.system(dependency)
-    return { type = "system", dependency = dependency }
-end
-
----@param remote_url string
-function InstallReceiptBuilder.git_remote(remote_url)
-    return { type = "git", remote = remote_url }
 end
 
 M.InstallReceiptBuilder = InstallReceiptBuilder
