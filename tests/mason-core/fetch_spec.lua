@@ -30,18 +30,21 @@ describe("fetch", function()
         assert.spy(spawn.curl).was_called(1)
         assert.spy(spawn.wget).was_called_with {
             {
-                ("--header=User-Agent: mason.nvim %s (+https://github.com/mason-org/mason.nvim)"):format(
-                    version.VERSION
-                ),
-                "--header=X-Custom-Header: here",
+                {
+                    "--header",
+                    ("User-Agent: mason.nvim %s (+https://github.com/mason-org/mason.nvim)"):format(version.VERSION),
+                },
+                {
+                    "--header",
+                    "X-Custom-Header: here",
+                },
             },
-            "-nv",
             "-o",
             "/dev/null",
             "-O",
             "-",
-            "--timeout=30",
-            "--method=GET",
+            "-T",
+            30,
             vim.NIL, -- body-data
             "https://api.github.com",
         }
@@ -86,17 +89,17 @@ describe("fetch", function()
 
         assert.spy(spawn.wget).was_called_with {
             {
-                ("--header=User-Agent: mason.nvim %s (+https://github.com/mason-org/mason.nvim)"):format(
-                    version.VERSION
-                ),
+                {
+                    "--header",
+                    ("User-Agent: mason.nvim %s (+https://github.com/mason-org/mason.nvim)"):format(version.VERSION),
+                },
             },
-            "-nv",
             "-o",
             "/dev/null",
             "-O",
             "/test.json",
-            "--timeout=30",
-            "--method=GET",
+            "-T",
+            30,
             vim.NIL, -- body-data
             "https://api.github.com/data",
         }
@@ -116,5 +119,39 @@ describe("fetch", function()
             "https://api.github.com/data",
             on_spawn = match.is_function(),
         })
+    end)
+end)
+
+describe("fetch :: wget", function()
+    it("should reject non-supported HTTP methods", function()
+        stub(spawn, "wget")
+        stub(spawn, "curl")
+        spawn.wget.returns(Result.failure "wget failure")
+        spawn.curl.returns(Result.failure "curl failure")
+        local PATCH_ERR = assert.has_error(function()
+            fetch("https://api.github.com/data", { method = "PATCH" }):get_or_throw()
+        end)
+        local DELETE_ERR = assert.has_error(function()
+            fetch("https://api.github.com/data", { method = "DELETE" }):get_or_throw()
+        end)
+        local PUT_ERR = assert.has_error(function()
+            fetch("https://api.github.com/data", { method = "PUT" }):get_or_throw()
+        end)
+
+        assert.equals("fetch: wget doesn't support HTTP method PATCH", PATCH_ERR)
+        assert.equals("fetch: wget doesn't support HTTP method DELETE", DELETE_ERR)
+        assert.equals("fetch: wget doesn't support HTTP method PUT", PUT_ERR)
+    end)
+
+    it("should reject requests with opts.data if not opts.method is not POST", function()
+        stub(spawn, "wget")
+        stub(spawn, "curl")
+        spawn.wget.returns(Result.failure "wget failure")
+        spawn.curl.returns(Result.failure "curl failure")
+        local err = assert.has_error(function()
+            fetch("https://api.github.com/data", { data = "data" }):get_or_throw()
+        end)
+
+        assert.equals("fetch: data provided but method is not POST (was GET)", err)
     end)
 end)

@@ -75,10 +75,23 @@ local function fetch(url, opts)
     end
 
     local function wget()
-        local headers = {}
-        for k, v in pairs(opts.headers) do
-            table.insert(headers, "--header")
-            table.insert(headers, k .. ": " .. v)
+        local headers = _.sort_by(
+            _.nth(2),
+            _.map(
+                _.compose(function(header)
+                    return { "--header", header }
+                end, _.join ": "),
+                _.to_pairs(opts.headers)
+            )
+        )
+
+        if opts.data and opts.method ~= "POST" then
+            return Result.failure(("fetch: data provided but method is not POST (was %s)"):format(opts.method or "-"))
+        end
+
+        if not _.any(_.equals(opts.method), { "GET", "POST" }) then
+            -- Note: --spider can be used for HEAD support, if ever needed
+            return Result.failure(("fetch: wget doesn't support HTTP method %s"):format(opts.method))
         end
 
         return spawn.wget {
