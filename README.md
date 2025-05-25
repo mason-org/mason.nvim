@@ -315,6 +315,10 @@ local DEFAULT_SETTINGS = {
             toggle_help = "g?",
         },
     },
+
+    health = {
+        ignore = {},
+    },
 }
 ```
 
