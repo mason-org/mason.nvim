@@ -94,7 +94,7 @@ local function check_core_utils()
     check { name = "unzip", cmd = "unzip", args = { "-v" }, relaxed = true }
 
     -- wget is used interchangeably with curl, but with lower priority, so we mark wget as relaxed
-    check { cmd = "wget", args = { "--version" }, name = "wget", relaxed = true }
+    check { cmd = "wget", args = { "--help" }, name = "wget", relaxed = true }
     check { cmd = "curl", args = { "--version" }, name = "curl" }
     check {
         cmd = "gzip",
