@@ -189,6 +189,11 @@ function FileRegistrySource:serialize()
     }
 end
 
+---@param other FileRegistrySource
+function FileRegistrySource:is_same_location(other)
+    return vim.fn.expand(self.spec.path) == vim.fn.expand(other.spec.path)
+end
+
 function FileRegistrySource:__tostring()
     return ("FileRegistrySource(path=%s)"):format(self.spec.path)
 end

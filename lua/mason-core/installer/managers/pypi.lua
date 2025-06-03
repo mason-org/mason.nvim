@@ -207,16 +207,18 @@ local function pip_install(pkgs, extra_args)
             pkgs,
         }
     else
-        return venv_python {
-            "-m",
-            "pip",
-            "--disable-pip-version-check",
-            "install",
-            "--ignore-installed",
-            extra_args or vim.NIL,
-            pkgs,
-        }
+    return venv_python {
+        "-m",
+        "pip",
+        "--disable-pip-version-check",
+        "install",
+        "--no-user",
+        "--ignore-installed",
+        extra_args or vim.NIL,
+        pkgs,
+    }
     end
+
 end
 
 ---@async
