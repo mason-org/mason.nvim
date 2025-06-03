@@ -233,6 +233,10 @@ local DEFAULT_SETTINGS = {
         -- Whether to upgrade pip to the latest version in the virtual environment before installing packages.
         upgrade_pip = false,
 
+        ---@since 1.8.0
+        -- Whether to use uv to install packages instead of pip
+        use_uv      = false,
+
         ---@since 1.0.0
         -- These args will be added to `pip install` calls. Note that setting extra args might impact intended behavior
         -- and is not recommended.
