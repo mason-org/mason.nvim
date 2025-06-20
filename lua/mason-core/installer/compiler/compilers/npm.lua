@@ -1,6 +1,7 @@
 local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
 local providers = require "mason-core.providers"
+local settings = require "mason.settings"
 
 ---@param purl Purl
 local function purl_to_npm(purl)
@@ -33,11 +34,11 @@ end
 ---@param ctx InstallContext
 ---@param source ParsedNpmSource
 function M.install(ctx, source)
-    local npm = require "mason-core.installer.managers.npm"
-
+    local manager = settings.current.npm.use_pnpm and require "mason-core.installer.managers.pnpm"
+        or require "mason-core.installer.managers.npm"
     return Result.try(function(try)
-        try(npm.init())
-        try(npm.install(source.package, source.version, {
+        try(manager.init())
+        try(manager.install(source.package, source.version, {
             extra_packages = source.extra_packages,
         }))
     end)
