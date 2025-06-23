@@ -66,6 +66,10 @@ local DEFAULT_SETTINGS = {
         --
         -- Example: { "--proxy", "https://proxyserver" }
         install_args = {},
+
+        ---@since 2.0.1
+        -- Respect the `vim.g.python3_host_prog` while resolving packages from PyPI
+        use_python3_host_prog = false,
     },
 
     ui = {
