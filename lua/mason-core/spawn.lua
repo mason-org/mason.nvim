@@ -13,6 +13,21 @@ local spawn = {
     _flatten_cmd_args = _.compose(_.filter(is_not_nil), _.flatten),
 }
 
+---@param cmd string
+local function exepath(cmd)
+    if platform.is.win then
+        -- On Windows, exepath() assumes the system is capable of executing "Unix-like" executables if the shell is a Unix
+        -- shell. We temporarily override it to a Windows shell ("powershell") to avoid that behaviour.
+        local old_shell = vim.o.shell
+        vim.o.shell = "powershell"
+        local expanded_cmd = vim.fn.exepath(cmd)
+        vim.o.shell = old_shell
+        return expanded_cmd
+    else
+        return vim.fn.exepath(cmd)
+    end
+end
+
 local function Failure(err, cmd)
     return Result.failure(setmetatable(err, {
         __tostring = function()
@@ -66,7 +81,8 @@ setmetatable(spawn, {
             -- Find the executable path via vim.fn.exepath on Windows because libuv fails to resolve certain executables
             -- in PATH.
             if platform.is.win and (spawn_args.env and has_path(spawn_args.env)) == nil then
-                local expanded_cmd = vim.fn.exepath(canonical_cmd)
+                a.scheduler()
+                local expanded_cmd = exepath(canonical_cmd)
                 if expanded_cmd ~= "" then
                     cmd = expanded_cmd
                 end

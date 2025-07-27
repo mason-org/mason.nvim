@@ -75,19 +75,36 @@ local function fetch(url, opts)
     end
 
     local function wget()
-        local headers =
-            _.sort_by(_.identity, _.map(_.compose(_.format "--header=%s", _.join ": "), _.to_pairs(opts.headers)))
+        local headers = _.sort_by(
+            _.nth(2),
+            _.map(
+                _.compose(function(header)
+                    return { "--header", header }
+                end, _.join ": "),
+                _.to_pairs(opts.headers)
+            )
+        )
+
+        if opts.data and opts.method ~= "POST" then
+            return Result.failure(("fetch: data provided but method is not POST (was %s)"):format(opts.method or "-"))
+        end
+
+        if not _.any(_.equals(opts.method), { "GET", "POST" }) then
+            -- Note: --spider can be used for HEAD support, if ever needed
+            return Result.failure(("fetch: wget doesn't support HTTP method %s"):format(opts.method))
+        end
+
         return spawn.wget {
             headers,
-            "-nv",
             "-o",
             "/dev/null",
             "-O",
             opts.out_file or "-",
-            ("--timeout=%s"):format(TIMEOUT_SECONDS),
-            ("--method=%s"):format(opts.method),
-            opts.data and {
-                ("--body-data=%s"):format(opts.data) or vim.NIL,
+            "-T",
+            TIMEOUT_SECONDS,
+            opts.data and opts.method == "POST" and {
+                "--post-data",
+                opts.data,
             } or vim.NIL,
             url,
         }
