@@ -173,6 +173,7 @@ function InstallHandle:terminate()
             end
         end
         check:stop()
+        check:close()
         if not self:is_closed() then
             self:close()
         end
