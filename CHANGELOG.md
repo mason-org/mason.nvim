@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.1](https://github.com/mason-org/mason.nvim/compare/v2.0.0...v2.0.1) (2025-07-25)
+
+
+### Bug Fixes
+
+* **fetch:** add busybox wget support ([#1829](https://github.com/mason-org/mason.nvim/issues/1829)) ([8024d64](https://github.com/mason-org/mason.nvim/commit/8024d64e1330b86044fed4c8494ef3dcd483a67c))
+* **pypi:** pass --no-user flag ([#1958](https://github.com/mason-org/mason.nvim/issues/1958)) ([1aceba8](https://github.com/mason-org/mason.nvim/commit/1aceba8bc158b5aaf90649077cad06744bc23ac4))
+* **registry:** ensure there's no duplicate registry entries ([#1957](https://github.com/mason-org/mason.nvim/issues/1957)) ([3501b0f](https://github.com/mason-org/mason.nvim/commit/3501b0f96d9f2f878b1947cf3614bc02d053a0c0))
+* **spawn:** fix calling vim.fn when inside fast event loop on Windows ([#1950](https://github.com/mason-org/mason.nvim/issues/1950)) ([888d6ee](https://github.com/mason-org/mason.nvim/commit/888d6ee499d8089a3a4be4309d239d6be1c1e6c0))
+* **spawn:** fix locating exepath on Windows systems using a Unix `'shell'` ([#1991](https://github.com/mason-org/mason.nvim/issues/1991)) ([edd8f7b](https://github.com/mason-org/mason.nvim/commit/edd8f7bce8f86465349b24e235718eb3ea52878d))
+
 ## [2.0.0](https://github.com/mason-org/mason.nvim/compare/v1.11.0...v2.0.0) (2025-05-06)
 
 This release has been an ongoing effort for quite some time now and is now ready for release. Most users should not

@@ -215,6 +215,7 @@ function M.spawn(cmd, opts, callback)
                 end
             end
             check:stop()
+            check:close()
             callback(successful, exit_code, signal)
         end)
 
