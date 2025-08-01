@@ -6,7 +6,7 @@ local test_helpers = require "mason-test.helpers"
 
 ---@param overrides Purl
 local function purl(overrides)
-    local purl = Purl.parse("pkg:nuget/package@2.2.0"):get_or_throw()
+    local purl = Purl.parse("pkg:nuget/package@2.2.0?repository_url=https://api.nuget.org/v3/index.json"):get_or_throw()
     if not overrides then
         return purl
     end
@@ -19,6 +19,7 @@ describe("nuget compiler :: parsing", function()
             Result.success {
                 package = "package",
                 version = "2.2.0",
+                repository_url = "https://api.nuget.org/v3/index.json"
             },
             nuget.parse({}, purl())
         )
@@ -45,11 +46,12 @@ describe("nuget compiler :: installing", function()
             return nuget.install(ctx, {
                 package = "package",
                 version = "1.5.0",
+                repository_url = "https://api.nuget.org/v3/index.json"
             })
         end)
 
         assert.is_true(result:is_success())
         assert.spy(manager.install).was_called(1)
-        assert.spy(manager.install).was_called_with("package", "1.5.0")
+        assert.spy(manager.install).was_called_with("package", "1.5.0", "https://api.nuget.org/v3/index.json")
     end)
 end)
