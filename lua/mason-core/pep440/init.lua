@@ -1,4 +1,3 @@
--- Function to split a version string into its components
 local function split_version(version)
     local parts = {}
     for part in version:gmatch "[^.]+" do
@@ -7,7 +6,6 @@ local function split_version(version)
     return parts
 end
 
--- Function to compare two versions
 local function compare_versions(version1, version2)
     local v1_parts = split_version(version1)
     local v2_parts = split_version(version2)
@@ -27,9 +25,8 @@ local function compare_versions(version1, version2)
     return 0
 end
 
--- Function to check a version against a single specifier
 local function check_single_specifier(version, specifier)
-    local operator, spec_version = specifier:match "^([<>=!]+)%s*(.+)$"
+    local operator, spec_version = specifier:match "^([<>=!~]+)%s*(.+)$"
     local comp_result = compare_versions(version, spec_version)
 
     if operator == "==" then
@@ -44,12 +41,23 @@ local function check_single_specifier(version, specifier)
         return comp_result >= 0
     elseif operator == ">" then
         return comp_result > 0
+    elseif operator == "~=" then
+        if comp_result < 0 then
+            return false
+        end
+        local spec_version_components = split_version(spec_version)
+        local version_components = split_version(version)
+        for i = 1, #spec_version_components - 1 do
+            if spec_version_components[i] ~= version_components[i] then
+                return false
+            end
+        end
+        return true
     else
-        error("Invalid operator in version specifier: " .. operator)
+        error("Unknown operator in version specifier: " .. operator)
     end
 end
 
--- Function to check a version against multiple specifiers
 local function check_version(version, specifiers)
     for specifier in specifiers:gmatch "[^,]+" do
         if not check_single_specifier(version, specifier:match "^%s*(.-)%s*$") then
