@@ -82,15 +82,6 @@ describe("cargo compiler :: parsing", function()
             cargo.parse({}, purl { qualifiers = { locked = "false" } })
         )
     end)
-
-    it("should check supported platforms", function()
-        assert.same(
-            Result.failure "PLATFORM_UNSUPPORTED",
-            cargo.parse({
-                supported_platforms = { "VIC64" },
-            }, purl { qualifiers = { locked = "false" } })
-        )
-    end)
 end)
 
 describe("cargo compiler :: installing", function()

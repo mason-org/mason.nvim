@@ -60,6 +60,7 @@ Package.License = setmetatable({}, {
 
 ---@class RegistryPackageSource
 ---@field id string PURL-compliant identifier.
+---@field supported_platforms? Platform[]
 ---@field version_overrides? RegistryPackageSourceVersionOverride[]
 
 ---@class RegistryPackageSchemas
