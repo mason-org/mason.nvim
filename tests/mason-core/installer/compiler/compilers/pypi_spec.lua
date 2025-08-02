@@ -37,10 +37,6 @@ describe("pypi compiler :: parsing", function()
         )
         settings.set(settings._DEFAULT_SETTINGS)
     end)
-
-    it("should check supported platforms", function()
-        assert.same(Result.failure "PLATFORM_UNSUPPORTED", pypi.parse({ supported_platforms = { "VIC64" } }, purl()))
-    end)
 end)
 
 describe("pypi compiler :: installing", function()

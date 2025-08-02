@@ -24,10 +24,6 @@ describe("gem compiler :: parsing", function()
             gem.parse({ extra_packages = { "extra" } }, purl())
         )
     end)
-
-    it("should check supported platforms", function()
-        assert.same(Result.failure "PLATFORM_UNSUPPORTED", gem.parse({ supported_platforms = { "VIC64" } }, purl()))
-    end)
 end)
 
 describe("gem compiler :: installing", function()

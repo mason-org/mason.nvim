@@ -1,45 +1,37 @@
 local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
 local providers = require "mason-core.providers"
-local util = require "mason-core.installer.compiler.util"
 
 local M = {}
 
 ---@class CargoSource : RegistryPackageSource
----@field supported_platforms? string[]
 
 ---@param source CargoSource
 ---@param purl Purl
 function M.parse(source, purl)
-    return Result.try(function(try)
-        if source.supported_platforms then
-            try(util.ensure_valid_platform(source.supported_platforms))
-        end
+    local repository_url = _.path({ "qualifiers", "repository_url" }, purl)
 
-        local repository_url = _.path({ "qualifiers", "repository_url" }, purl)
-
-        local git
-        if repository_url then
-            git = {
-                url = repository_url,
-                rev = _.path({ "qualifiers", "rev" }, purl) == "true",
-            }
-        end
-
-        ---@type string?
-        local features = _.path({ "qualifiers", "features" }, purl)
-        local locked = _.path({ "qualifiers", "locked" }, purl)
-
-        ---@class ParsedCargoSource : ParsedPackageSource
-        local parsed_source = {
-            crate = purl.name,
-            version = purl.version,
-            features = features,
-            locked = locked ~= "false",
-            git = git,
+    local git
+    if repository_url then
+        git = {
+            url = repository_url,
+            rev = _.path({ "qualifiers", "rev" }, purl) == "true",
         }
-        return parsed_source
-    end)
+    end
+
+    ---@type string?
+    local features = _.path({ "qualifiers", "features" }, purl)
+    local locked = _.path({ "qualifiers", "locked" }, purl)
+
+    ---@class ParsedCargoSource : ParsedPackageSource
+    local parsed_source = {
+        crate = purl.name,
+        version = purl.version,
+        features = features,
+        locked = locked ~= "false",
+        git = git,
+    }
+    return Result.success(parsed_source)
 end
 
 ---@async
