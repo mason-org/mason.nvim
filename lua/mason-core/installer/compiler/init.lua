@@ -72,6 +72,7 @@ end
 
 ---@param source RegistryPackageSource
 ---@param version string?
+---@return RegistryPackageSource
 local function coalesce_source(source, version)
     if version and source.version_overrides then
         for i = #source.version_overrides, 1, -1 do
@@ -116,6 +117,10 @@ function M.parse(spec, opts)
         end
 
         local source = coalesce_source(spec.source, opts.version)
+
+        if source.supported_platforms then
+            try(util.ensure_valid_platform(source.supported_platforms))
+        end
 
         ---@type Purl
         local purl = try(Purl.parse(source.id))
