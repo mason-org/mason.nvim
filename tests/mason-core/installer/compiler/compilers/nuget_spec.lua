@@ -19,7 +19,7 @@ describe("nuget compiler :: parsing", function()
             Result.success {
                 package = "package",
                 version = "2.2.0",
-                repository_url = "https://api.nuget.org/v3/index.json"
+                repository_url = "https://api.nuget.org/v3/index.json",
             },
             nuget.parse({}, purl())
         )
@@ -46,7 +46,7 @@ describe("nuget compiler :: installing", function()
             return nuget.install(ctx, {
                 package = "package",
                 version = "1.5.0",
-                repository_url = "https://api.nuget.org/v3/index.json"
+                repository_url = "https://api.nuget.org/v3/index.json",
             })
         end)
 

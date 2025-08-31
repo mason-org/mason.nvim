@@ -1,8 +1,8 @@
 local Result = require "mason-core.result"
+local fetch = require "mason-core.fetch"
 local installer = require "mason-core.installer"
 local log = require "mason-core.log"
 local platform = require "mason-core.platform"
-local fetch = require "mason-core.fetch"
 
 local M = {}
 
@@ -24,7 +24,7 @@ function M.install(package, version, repository_url)
     }
 
     if repository_url then
-        table.insert(args, { "--add-source",  repository_url })
+        table.insert(args, { "--add-source", repository_url })
     end
 
     table.insert(args, package)
