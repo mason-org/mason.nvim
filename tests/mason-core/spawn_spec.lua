@@ -148,6 +148,8 @@ describe("async spawn", function()
     end)
 
     describe("Windows", function()
+        -- Note: Tests assume they're executed in a Unix environment (e.g. uses Unix path separators in tests).
+
         before_each(function()
             platform.is.win = true
         end)
@@ -173,24 +175,43 @@ describe("async spawn", function()
             )
         end)
 
-        it("should not use exepath if env.PATH is set", function()
+        it("should use exepath if env.PATH is set", function()
             stub(process, "spawn", function(_, _, callback)
                 callback(true, 0, 0)
             end)
 
-            local result = a.run_blocking(spawn.bash, { "arg1", env = { PATH = "C:\\some\\path" } })
+            local result = a.run_blocking(spawn.bash, { "arg1", env = { PATH = "C:\\some\\path:" .. vim.env.PATH } })
             assert.is_true(result:is_success())
             assert.spy(process.spawn).was_called(1)
             assert.spy(process.spawn).was_called_with(
-                "bash",
+                vim.fn.exepath "bash",
                 match.tbl_containing {
                     args = match.same { "arg1" },
+                    env = match.is_table(),
                 },
                 match.is_function()
             )
         end)
 
-        it("should not use exepath if env_raw.PATH is set", function()
+        it("should use exepath if env_raw.PATH is set", function()
+            stub(process, "spawn", function(_, _, callback)
+                callback(true, 0, 0)
+            end)
+
+            local result = a.run_blocking(spawn.bash, { "arg1", env_raw = { "PATH=C:\\some\\path:" .. vim.env.PATH } })
+            assert.is_true(result:is_success())
+            assert.spy(process.spawn).was_called(1)
+            assert.spy(process.spawn).was_called_with(
+                vim.fn.exepath "bash",
+                match.tbl_containing {
+                    args = match.same { "arg1" },
+                    env = match.is_table(),
+                },
+                match.is_function()
+            )
+        end)
+
+        it("should default to provided cmd if exepath returns nothing", function()
             stub(process, "spawn", function(_, _, callback)
                 callback(true, 0, 0)
             end)
@@ -207,7 +228,7 @@ describe("async spawn", function()
             )
         end)
 
-        it("should not use exepath if with_paths is provided", function()
+        it("should use exepath if with_paths is provided", function()
             stub(process, "spawn", function(_, _, callback)
                 callback(true, 0, 0)
             end)
@@ -216,7 +237,7 @@ describe("async spawn", function()
             assert.is_true(result:is_success())
             assert.spy(process.spawn).was_called(1)
             assert.spy(process.spawn).was_called_with(
-                "bash",
+                vim.fn.exepath "bash",
                 match.tbl_containing {
                     args = match.same { "arg1" },
                 },

@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.0](https://github.com/mason-org/mason.nvim/compare/v2.0.1...v2.1.0) (2025-09-30)
+
+
+### Features
+
+* **compiler:** make `supported_platforms` a universal source field ([#2002](https://github.com/mason-org/mason.nvim/issues/2002)) ([7dc4fac](https://github.com/mason-org/mason.nvim/commit/7dc4facca9702f95353d5a1f87daf23d78e31c2a))
+
+
+### Bug Fixes
+
+* **process:** close check handles ([#1995](https://github.com/mason-org/mason.nvim/issues/1995)) ([a1fbecc](https://github.com/mason-org/mason.nvim/commit/a1fbecc0fd76300e8fe84879fb1531f35cf7b018))
+* **pypi:** add support for "compatible release" (~=) PEP440 expressions ([#2000](https://github.com/mason-org/mason.nvim/issues/2000)) ([9e25c98](https://github.com/mason-org/mason.nvim/commit/9e25c98d4826998460926f8c5c2284848d80ae89))
+* **spawn:** always expand executable path on Windows ([#2021](https://github.com/mason-org/mason.nvim/issues/2021)) ([a83eabd](https://github.com/mason-org/mason.nvim/commit/a83eabdc8c49c0c93bf5bb162fa3b57404a9d095))
+* **ui:** only set border to none if `'winborder'` doesn't exist ([#1984](https://github.com/mason-org/mason.nvim/issues/1984)) ([3671ab0](https://github.com/mason-org/mason.nvim/commit/3671ab0d40aa5bd24b1686562bd0a23391ecf76a))
+
 ## [2.0.1](https://github.com/mason-org/mason.nvim/compare/v2.0.0...v2.0.1) (2025-07-25)
 
 
