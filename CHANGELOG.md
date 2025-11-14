@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1](https://github.com/mason-org/mason.nvim/compare/v2.1.0...v2.1.1) (2025-11-14)
+
+
+### Bug Fixes
+
+* **installer:** attempt to recover from known fs error while finalizing installation on some file systems ([#1933](https://github.com/mason-org/mason.nvim/issues/1933)) ([198f075](https://github.com/mason-org/mason.nvim/commit/198f07572c0014774fb87371946e0f03b4908bce))
+* **installer:** update cwd after uv_fs_rename() was successful ([#2033](https://github.com/mason-org/mason.nvim/issues/2033)) ([57e5a8a](https://github.com/mason-org/mason.nvim/commit/57e5a8addb8c71fb063ee4acda466c7cf6ad2800))
+
 ## [2.1.0](https://github.com/mason-org/mason.nvim/compare/v2.0.1...v2.1.0) (2025-09-30)
 
 
