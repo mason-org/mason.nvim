@@ -740,12 +740,8 @@ end
 
 local border = settings.current.ui.border
 
-if border == nil then
-    if vim.fn.has "nvim-0.11" == 1 then
-        border = vim.o.winborder
-    else
-        border = "none"
-    end
+if border == nil and vim.fn.exists "&winborder" == 0 then
+    border = "none"
 end
 
 window.init {

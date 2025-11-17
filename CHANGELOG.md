@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.1.0](https://github.com/mason-org/mason.nvim/compare/v2.0.1...v2.1.0) (2025-09-30)
+
+
+### Features
+
+* **compiler:** make `supported_platforms` a universal source field ([#2002](https://github.com/mason-org/mason.nvim/issues/2002)) ([7dc4fac](https://github.com/mason-org/mason.nvim/commit/7dc4facca9702f95353d5a1f87daf23d78e31c2a))
+
+
+### Bug Fixes
+
+* **process:** close check handles ([#1995](https://github.com/mason-org/mason.nvim/issues/1995)) ([a1fbecc](https://github.com/mason-org/mason.nvim/commit/a1fbecc0fd76300e8fe84879fb1531f35cf7b018))
+* **pypi:** add support for "compatible release" (~=) PEP440 expressions ([#2000](https://github.com/mason-org/mason.nvim/issues/2000)) ([9e25c98](https://github.com/mason-org/mason.nvim/commit/9e25c98d4826998460926f8c5c2284848d80ae89))
+* **spawn:** always expand executable path on Windows ([#2021](https://github.com/mason-org/mason.nvim/issues/2021)) ([a83eabd](https://github.com/mason-org/mason.nvim/commit/a83eabdc8c49c0c93bf5bb162fa3b57404a9d095))
+* **ui:** only set border to none if `'winborder'` doesn't exist ([#1984](https://github.com/mason-org/mason.nvim/issues/1984)) ([3671ab0](https://github.com/mason-org/mason.nvim/commit/3671ab0d40aa5bd24b1686562bd0a23391ecf76a))
+
+## [2.0.1](https://github.com/mason-org/mason.nvim/compare/v2.0.0...v2.0.1) (2025-07-25)
+
+
+### Bug Fixes
+
+* **fetch:** add busybox wget support ([#1829](https://github.com/mason-org/mason.nvim/issues/1829)) ([8024d64](https://github.com/mason-org/mason.nvim/commit/8024d64e1330b86044fed4c8494ef3dcd483a67c))
+* **pypi:** pass --no-user flag ([#1958](https://github.com/mason-org/mason.nvim/issues/1958)) ([1aceba8](https://github.com/mason-org/mason.nvim/commit/1aceba8bc158b5aaf90649077cad06744bc23ac4))
+* **registry:** ensure there's no duplicate registry entries ([#1957](https://github.com/mason-org/mason.nvim/issues/1957)) ([3501b0f](https://github.com/mason-org/mason.nvim/commit/3501b0f96d9f2f878b1947cf3614bc02d053a0c0))
+* **spawn:** fix calling vim.fn when inside fast event loop on Windows ([#1950](https://github.com/mason-org/mason.nvim/issues/1950)) ([888d6ee](https://github.com/mason-org/mason.nvim/commit/888d6ee499d8089a3a4be4309d239d6be1c1e6c0))
+* **spawn:** fix locating exepath on Windows systems using a Unix `'shell'` ([#1991](https://github.com/mason-org/mason.nvim/issues/1991)) ([edd8f7b](https://github.com/mason-org/mason.nvim/commit/edd8f7bce8f86465349b24e235718eb3ea52878d))
+
 ## [2.0.0](https://github.com/mason-org/mason.nvim/compare/v1.11.0...v2.0.0) (2025-05-06)
 
 This release has been an ongoing effort for quite some time now and is now ready for release. Most users should not

@@ -13,9 +13,6 @@ local dummy_compiler = {
     ---@param opts PackageInstallOpts
     parse = function(source, purl, opts)
         return Result.try(function(try)
-            if source.supported_platforms then
-                try(util.ensure_valid_platform(source.supported_platforms))
-            end
             return {
                 package = purl.name,
                 extra_info = source.extra_info,
