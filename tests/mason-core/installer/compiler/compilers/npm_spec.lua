@@ -58,14 +58,14 @@ describe("npm compiler :: installing", function()
     end)
 
     it("should install npm packages when use_pnpm is set to true", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         local manager = require "mason-core.installer.managers.pnpm"
         local settings = require "mason.settings"
         settings.current.npm.use_pnpm = true
         stub(manager, "init", mockx.returns(Result.success()))
         stub(manager, "install", mockx.returns(Result.success()))
 
-        local result = installer.exec_in_context(ctx, function()
+        local result = ctx:execute(function()
             return npm.install(ctx, {
                 package = "@namespace/package",
                 version = "v1.5.0",

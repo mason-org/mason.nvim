@@ -1,20 +1,20 @@
 local Result = require "mason-core.result"
-local installer = require "mason-core.installer"
 local match = require "luassert.match"
 local pnpm = require "mason-core.installer.managers.pnpm"
 local spawn = require "mason-core.spawn"
 local spy = require "luassert.spy"
 local stub = require "luassert.stub"
+local test_helpers = require "mason-test.helpers"
 
 describe("pnpm manager", function()
     it("should init package.json", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         stub(ctx.fs, "read_file")
         stub(ctx.fs, "write_file")
         stub(spawn, "pnpm")
         ctx.fs.read_file.returns '{"name": "my-package", "version": "1.0.0"}'
         spawn.pnpm.returns(Result.success {})
-        installer.exec_in_context(ctx, function()
+        ctx:execute(function()
             pnpm.init()
         end)
 
@@ -29,8 +29,8 @@ describe("pnpm manager", function()
     end)
 
     it("should install extra packages", function()
-        local ctx = create_dummy_context()
-        installer.exec_in_context(ctx, function()
+        local ctx = test_helpers.create_context()
+        ctx:execute(function()
             pnpm.install("my-package", "1.0.0", {
                 extra_packages = { "extra-package" },
             })
