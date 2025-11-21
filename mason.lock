@@ -4,22 +4,22 @@ version 1
 ---
 
 rust-analyzer
-  version 2025-11-17
   registry
-    proto github
     id mason-org/mason-registry
     integrity 2025-11-17-blue-sea~61b4c705859f4158d38090c1e38e8fdc4f3d29db007f012766276aa498835cf6
+    proto github
+  version 2025-11-17
 
 vim-repeat
-  version 3d188ed2113431cf8dac77be61b842acb64433d9
   registry
-    proto lua
     id my-reg
+    proto lua
+  version 3d188ed2113431cf8dac77be61b842acb64433d9
 
 vim-surround
-  version 3d188ed2113431cf8dac77be61b842acb64433d9
   registry
-    proto file
     id ~/mason-registry
+    proto file
+  version 3d188ed2113431cf8dac77be61b842acb64433d9
 
 # vi:sw=2
