@@ -29,7 +29,7 @@ end
 ---@param file string
 ---@param contents Lockfile
 function M.write_lockfile(file, contents)
-    local parser = require "mason-core.lockfile.parser"
+    local parser = require "mason-core.lock.parser"
     if fs.sync.file_exists(file) and settings.current.lock.backup then
         backup_lockfile(file)
     end
@@ -92,8 +92,6 @@ function M.get_lockfile()
         end
     end
 end
-
-M.create_lockfile()
 
 local has_init = false
 function M.init()
