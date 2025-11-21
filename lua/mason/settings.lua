@@ -1,12 +1,10 @@
-local path = require "mason-core.path"
-
 local M = {}
 
 ---@class MasonSettings
 local DEFAULT_SETTINGS = {
     ---@since 1.0.0
     -- The directory in which to install packages.
-    install_root_dir = path.concat { vim.fn.stdpath "data", "mason" },
+    install_root_dir = vim.fs.joinpath(vim.fn.stdpath "data", "mason"),
 
     ---@since 1.0.0
     -- Where Mason should put its bin location in your PATH. Can be one of:
@@ -25,6 +23,14 @@ local DEFAULT_SETTINGS = {
     -- Limit for the maximum amount of packages to be installed at the same time. Once this limit is reached, any further
     -- packages that are requested to be installed will be put in a queue.
     max_concurrent_installers = 4,
+
+    lockfile = {
+        ---@since 2.2.0
+        enabled = false,
+
+        ---@since 2.2.0
+        file = vim.fs.joinpath(vim.fn.stdpath "config", "mason-lock.json"),
+    },
 
     ---@since 1.0.0
     -- [Advanced setting]

@@ -32,6 +32,13 @@ function InstallRunner:new(handle, semaphore)
 end
 
 ---@alias InstallRunnerCallback fun(success: true, receipt: InstallReceipt) | fun(success: false, error: any)
+local function pcallback(callback, ...)
+    local ok, err = pcall(callback, ...)
+    if not ok then
+        log.error("Failed to call user-provided callback.", err)
+    end
+end
+
 
 ---@param opts PackageInstallOpts
 ---@param callback? InstallRunnerCallback
@@ -70,9 +77,15 @@ function InstallRunner:execute(opts, callback)
 
         if not opts.debug and not success then
             -- clean up installation dir
-            pcall(function()
+            local ok, err = pcall(function()
                 fs.async.rmrf(context.cwd:get())
             end)
+            if not ok then
+                context.stdio_sink:stderr "Failed to clean up installation directory: "
+                context.stdio_sink:stderr(tostring(err))
+                context.stdio_sink:stderr "\n"
+                log.error("Failed to clean up installation directory.", err)
+            end
         end
 
         if not handle:is_closing() then
@@ -85,14 +98,14 @@ function InstallRunner:execute(opts, callback)
         if success then
             log.fmt_info("Installation succeeded for %s", handle.package)
             if callback then
-                callback(true, result.receipt)
+                pcallback(callback, true, result.receipt, metadata)
             end
             handle.package:emit("install:success", result.receipt)
             registry:emit("package:install:success", handle.package, result.receipt)
         else
             log.fmt_error("Installation failed for %s error=%s", handle.package, result)
             if callback then
-                callback(false, result)
+                pcallback(callback, false, result, metadata)
             end
             handle.package:emit("install:failed", result)
             registry:emit("package:install:failed", handle.package, result)

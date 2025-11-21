@@ -94,4 +94,8 @@ function InstallLocation:set_env(opts)
     end
 end
 
+function InstallLocation:__tostring()
+    return ("InstallLocation(dir=%s)"):format(self.dir)
+end
+
 return InstallLocation
