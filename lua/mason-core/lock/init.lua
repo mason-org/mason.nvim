@@ -10,16 +10,39 @@ local LOCKFILE_BACKUP_DIR = path.concat { vim.fn.stdpath "cache", "mason", "lock
 
 local M = {}
 
+---@class LockfileHeader
+---@field version '"1"'
+
+---@class LockfileRegistryGitHub
+---@field proto '"github"'
+---@field integrity string
+---@field namespace string
+---@field name string
+
+---@class LockfileRegistryFile
+---@field proto '"file"'
+---@field path string
+
+---@class LockfileRegistryLua
+---@field proto '"lua"'
+---@field mod string
+
+---@alias LockfileRegistry LockfileRegistryGitHub | LockfileRegistryFile | LockfileRegistryLua
+
+---@class LockfilePackage
+---@field version string
+---@field registry LockfileRegistry
+
 ---@class Lockfile
----@field schema_version 1
----@field registries table<string, string>
----@field packages table<string, string>
+---@field header LockfileHeader
+---@field body table<string, LockfilePackage>
 
 ---@param file string
 local function backup_lockfile(file)
     if not fs.sync.dir_exists(LOCKFILE_BACKUP_DIR) then
         fs.sync.mkdirp(LOCKFILE_BACKUP_DIR)
     end
+    -- TODO needs more unique name
     local backup_file = path.concat { LOCKFILE_BACKUP_DIR, ("mason-%s.lock"):format(os.date "%Y%m%d") }
     fs.sync.copy_file(file, backup_file)
     -- TODO gzip and rotate old backups?
@@ -82,14 +105,7 @@ end
 function M.get_lockfile()
     local file = settings.current.lock.file
     if fs.sync.file_exists(file) then
-        ---@type boolean, Lockfile
-        local ok, lockfile = pcall(vim.json.decode, fs.sync.read_file(file))
-        if ok then
-            return lockfile
-        else
-            log.error("Failed to read corrupt lockfile.", lockfile)
-            vim.notify(("Failed to read corrupt lockfile at %s."):format(file), vim.log.levels.ERROR)
-        end
+        return require("mason-core.lock.parser").deserialize(file)
     end
 end
 

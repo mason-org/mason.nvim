@@ -43,6 +43,7 @@ local function MasonInstall(package_specifiers, opts)
                 force = opts.force,
                 strict = opts.strict,
                 target = opts.target,
+                no_lock = opts["no-lock"]
             })
         end
     end)
@@ -148,6 +149,7 @@ end, {
                 "--debug",
                 "--force",
                 "--strict",
+                "--no-lock",
                 "--target=",
             })
         elseif _.matches("^.+@", arg_lead) then
