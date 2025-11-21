@@ -52,6 +52,7 @@ function Registry.get_installed_package_names()
     return directories
 end
 
+---@return Package[]
 function Registry.get_installed_packages()
     return vim.tbl_map(Registry.get_package, Registry.get_installed_package_names())
 end

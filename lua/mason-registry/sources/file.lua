@@ -15,7 +15,6 @@ local util = require "mason-registry.sources.util"
 
 ---@class FileRegistrySource : RegistrySource
 ---@field spec FileRegistrySourceSpec
----@field root_dir string
 ---@field buffer { specs: RegistryPackageSpec[], instances: table<string, Package> }?
 local FileRegistrySource = {}
 FileRegistrySource.__index = FileRegistrySource

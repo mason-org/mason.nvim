@@ -20,52 +20,52 @@ local function backup_lockfile(file)
     if not fs.sync.dir_exists(LOCKFILE_BACKUP_DIR) then
         fs.sync.mkdirp(LOCKFILE_BACKUP_DIR)
     end
-    local old_content = fs.sync.read_file(file)
-    local ok, minified_json = pcall(_.compose(vim.json.encode, vim.json.decode), old_content)
-    local backup_file = path.concat { LOCKFILE_BACKUP_DIR, ("mason-lock.%s.json"):format(os.date "%Y%m%d") }
-    if ok then
-        fs.sync.write_file(backup_file, minified_json)
-    end
+    local backup_file = path.concat { LOCKFILE_BACKUP_DIR, ("mason-%s.lock"):format(os.date "%Y%m%d") }
+    fs.sync.copy_file(file, backup_file)
+    -- TODO gzip and rotate old backups?
     return backup_file
 end
 
 ---@param file string
 ---@param contents Lockfile
 function M.write_lockfile(file, contents)
-    local pretty_json = require "mason-core.pretty_json"
-    if fs.sync.file_exists(file) then
+    local parser = require "mason-core.lockfile.parser"
+    if fs.sync.file_exists(file) and settings.current.lock.backup then
         backup_lockfile(file)
     end
-    local lockfile_dir = vim.fn.fnamemodify(settings.current.lock.file, ":p:h")
+    local lockfile_dir = vim.fs.dirname(settings.current.lock.file)
     if not fs.sync.dir_exists(lockfile_dir) then
         fs.sync.mkdirp(lockfile_dir)
     end
-    fs.sync.write_file(file, pretty_json(contents))
-end
-
----@param lockfile Lockfile
-local function set_registries(lockfile)
-    for source in sources.iter() do
-        source:get_installed_version():if_present(function(version)
-            lockfile.registries[source.id] = version
-        end)
-    end
+    fs.sync.write_file(file, parser.serialize(contents))
 end
 
 ---@return Lockfile
 function M.generate_lockfile()
     local lockfile = {
-        schema_version = 1,
-        registries = vim.empty_dict(),
-        packages = vim.empty_dict(),
+        header = {
+            version = "1",
+        },
+        body = {},
     }
 
-    set_registries(lockfile)
-
-    for _, pkg in ipairs(registry.get_installed_packages()) do
-        pkg:get_installed_version():if_present(function(version)
-            lockfile.packages[pkg.name] = version
-        end)
+    for __, pkg in ipairs(registry.get_installed_packages()) do
+        -- TODO error if not present
+        -- TODO also set registry, if registry is not in receipt do error
+        local version = pkg:get_installed_version()
+        if version then
+            pkg:get_receipt():map(_.prop "registry"):if_present(function(registry)
+                if registry.proto == "github" then
+                    registry.integrity = registry.version .. "~" .. registry.checksums["registry.json"]
+                    registry.version = nil
+                    registry.checksums = nil
+                end
+                lockfile.body[pkg.name] = {
+                    version = version,
+                    registry = registry,
+                }
+            end)
+        end
     end
 
     return lockfile
@@ -92,6 +92,8 @@ function M.get_lockfile()
         end
     end
 end
+
+M.create_lockfile()
 
 local has_init = false
 function M.init()

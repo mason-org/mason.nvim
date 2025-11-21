@@ -24,12 +24,15 @@ local DEFAULT_SETTINGS = {
     -- packages that are requested to be installed will be put in a queue.
     max_concurrent_installers = 4,
 
-    lockfile = {
+    lock = {
         ---@since 2.2.0
-        enabled = false,
+        enabled = true,
 
         ---@since 2.2.0
-        file = vim.fs.joinpath(vim.fn.stdpath "config", "mason-lock.json"),
+        backup = true,
+
+        ---@since 2.2.0
+        file = vim.fs.joinpath(vim.fn.stdpath "config", "mason.lock"),
     },
 
     ---@since 1.0.0

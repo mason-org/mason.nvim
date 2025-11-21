@@ -33,7 +33,7 @@ function GitHubRegistrySource:new(spec)
     ---@type GitHubRegistrySource
     local instance = {}
     setmetatable(instance, GitHubRegistrySource)
-    local root_dir = InstallLocation.global():registry(path.concat { "github", spec.namespace, spec.name })
+    local root_dir = InstallLocation.global():registry(path.concat { "github", spec.namespace, spec.name, spec.version })
     instance.id = spec.id
     instance.spec = spec
     instance.repo = ("%s/%s"):format(spec.namespace, spec.name)
@@ -143,6 +143,15 @@ function GitHubRegistrySource:install()
         :on_failure(function(err)
             log.fmt_error("Failed to install registry %s. %s", self, err)
         end)
+end
+
+function GitHubRegistrySource:uninstall()
+    if self.spec.version then
+        fs.sync.rmrf(self.root_dir)
+    else
+        fs.sync.unlink(self.info_file)
+        fs.sync.unlink(self.data_file)
+    end
 end
 
 ---@return { checksums: table<string, string>, version: string, download_timestamp: integer }
