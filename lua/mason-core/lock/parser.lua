@@ -116,10 +116,32 @@ local function deserialize(file)
             end
         end
 
-        return {
+        ---@type Lockfile
+        local lockfile = {
             header = header,
             body = body,
         }
+
+        assert(lockfile.header and lockfile.header.version, "Header and version missing.")
+        assert(lockfile.header.version == "1", "Unknown lockfile version.")
+        for pkg_name, metadata in pairs(lockfile.body) do
+            assert(metadata.version, "Missing version field.")
+            assert(metadata.registry, "Missing registry field.")
+            local registry = metadata.registry
+            if registry.proto == "github" then
+                assert(registry.integrity, "integrity field missing")
+                assert(registry.name, "name field missing")
+                assert(registry.namespace, "namespace field missing")
+            elseif registry.proto == "file" then
+                assert(registry.path, "path field missing")
+            elseif registry.proto == "lua" then
+                assert(registry.mod, "mod field missing")
+            else
+                error "Unknown registry protocol."
+            end
+        end
+
+        return lockfile
     end)
     return parser(thread, file)
 end

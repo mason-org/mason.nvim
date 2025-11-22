@@ -1,10 +1,9 @@
 local FileRegistrySource = require "mason-registry.sources.file"
 local GitHubRegistrySource = require "mason-registry.sources.github"
 local LuaRegistrySource = require "mason-registry.sources.lua"
+local Optional = require "mason-core.optional"
 local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
-local a = require "mason-core.async"
-local lock = require "mason-core.lock"
 
 local M = {}
 
@@ -15,54 +14,76 @@ local providers = {
         local version, checksum = unpack(_.split("~", registry_info.integrity))
         local cache_key = registry_info.name .. registry_info.namespace .. version
         return cache(cache_key, function()
-            local registry = GitHubRegistrySource:new {
+            return GitHubRegistrySource:new {
                 id = ("%s/%s"):format(registry_info.namespace, registry_info.name),
                 name = registry_info.name,
                 namespace = registry_info.namespace,
                 version = version,
             }
-            registry:install()
-            return registry
         end)
     end,
     ---@param registry_info LockfileRegistryFile
     ---@return FileRegistrySource
     file = function(registry_info, cache)
         return cache(registry_info.path, function()
-            local registry = FileRegistrySource:new {
+            return FileRegistrySource:new {
                 id = registry_info.path,
                 path = registry_info.path,
             }
-            registry:install()
-            return registry
         end)
     end,
     ---@param registry_info LockfileRegistryLua
     ---@return LuaRegistrySource
     lua = function(registry_info, cache)
         return cache(registry_info.mod, function()
-            local registry = LuaRegistrySource:new {
+            return LuaRegistrySource:new {
                 id = registry_info.mod,
                 mod = registry_info.mod,
             }
-            registry:install()
-            return registry
         end)
     end,
 }
 
-local IndexedCache = {
+---@class LockfileInstallGroup
+---@field packages table<Package, LockfilePackage>
+---@field unavailable_packages table<string, string>
+local LockfileInstallGroup = {}
+LockfileInstallGroup.__index = LockfileInstallGroup
+
+---@param packages table<Package, LockfilePackage>
+---@param unavailable_packages table<string, string>
+function LockfileInstallGroup:new(packages, unavailable_packages)
+    ---@type LockfileInstallGroup
+    local instance = {}
+    setmetatable(instance, self)
+    instance.packages = packages
+    instance.unavailable_packages = unavailable_packages
+    return instance
+end
+
+function LockfileInstallGroup:install()
+    for pkg, metadata in pairs(self.packages) do
+        print("Installing", pkg.name)
+        pkg:install({
+            no_lock = true,
+            version = metadata.version,
+        }, function(success)
+            if success then
+                print(pkg.name, "succeeded!")
+            else
+                print(pkg.name, "failed!")
+            end
+        end)
+    end
+end
+
+local RegistryCache = {
     __index = function(self, root_key)
         self[root_key] = {}
         setmetatable(self[root_key], {
             __call = function(cache, key, init)
                 if not cache[key] then
-                    local ok, registry = pcall(init)
-                    if ok then
-                        cache[key] = registry
-                    else
-                        error(registry)
-                    end
+                    cache[key] = init()
                 end
                 return cache[key]
             end,
@@ -71,46 +92,73 @@ local IndexedCache = {
     end,
 }
 
-M.restore = a.scope(function()
-    local lockfile = lock.get_lockfile()
-    -- TODO probably do somewhere else
-    assert(lockfile, "Lockfile is nil!")
-    assert(lockfile.header and lockfile.header.version == "1", "Unknown lockfile version.")
+---@class LockfileRestore
+---@field lockfile Lockfile
+---@field registry_cache table
+local LockfileRestore = {}
+LockfileRestore.__index = LockfileRestore
 
-    local cache = setmetatable({}, IndexedCache)
+---@param lockfile Lockfile
+function LockfileRestore:new(lockfile)
+    ---@type LockfileRestore
+    local instance = {}
+    setmetatable(instance, self)
+    instance.lockfile = lockfile
+    instance.registry_cache = setmetatable({}, RegistryCache)
+    return instance
+end
 
-    ---@param pkg_name string
-    ---@param metadata LockfilePackage
-    local function get_package(pkg_name, metadata)
-        local registry = metadata.registry
-        if registry.proto == "github" then
-            return providers.github(registry, cache.github):get_package(pkg_name)
-        elseif registry.proto == "lua" then
-            return providers.lua(registry, cache.lua):get_package(pkg_name)
-        elseif registry.proto == "file" then
-            return providers.file(registry, cache.file):get_package(pkg_name)
+---@param registry_info LockfileRegistry
+---@return RegistrySource
+function LockfileRestore:get_registry(registry_info)
+    if registry_info.proto == "github" then
+        return providers.github(registry_info, self.registry_cache.github)
+    elseif registry_info.proto == "lua" then
+        return providers.lua(registry_info, self.registry_cache.lua)
+    elseif registry_info.proto == "file" then
+        return providers.file(registry_info, self.registry_cache.file)
+    end
+end
+
+---@async
+---@param pkg_name string
+---@param metadata LockfilePackage
+function LockfileRestore:get_package(pkg_name, metadata)
+    return Result.try(function(try)
+        local ephemeral_registry = self:get_registry(metadata.registry)
+        if not ephemeral_registry:is_installed() then
+            try(ephemeral_registry:install())
         end
-        error(("Unknown registry protocol: %s."):format(registry.proto))
-    end
+        return Optional.of_nilable(ephemeral_registry:get_package(pkg_name)):ok_or "Unable to find package."
+    end)
+end
 
-    for pkg_name, metadata in pairs(lockfile.body) do
-        ---@type Package
-        local pkg = assert(get_package(pkg_name, metadata), ("Package %s not found."):format(pkg_name))
-        assert(metadata.version, "Package version not specified in lockfile.")
-        print("Installing", pkg_name, metadata.version)
-        pkg:install({
-            version = metadata.version,
-            no_lock = true,
-        }, function(success, err)
-            print(pkg_name, "finished installing", success, err)
-        end)
+---@async
+function LockfileRestore:prepare()
+    local available = {}
+    local unavailable = {}
+    for pkg_name, metadata in pairs(self.lockfile.body) do
+        self:get_package(pkg_name, metadata)
+            :on_success(function(pkg)
+                available[pkg] = metadata
+            end)
+            :on_failure(function(err)
+                unavailable[pkg_name] = err
+            end)
     end
+    return LockfileInstallGroup:new(available, unavailable)
+end
 
-    for _, registry in pairs(cache.github) do
+function LockfileRestore:cleanup()
+    for _, registry in pairs(self.registry_cache.github) do
         registry:uninstall()
     end
-end)
+end
 
-M.restore()
+require("mason-core.async").run_blocking(function()
+    local restore = LockfileRestore:new(require("mason-core.lock").get_lockfile())
+    restore:prepare():install()
+    -- restore:cleanup()
+end)
 
 return M
