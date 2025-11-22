@@ -154,6 +154,51 @@ describe("registry linker", function()
         end
     end)
 
+    it("should properly expand links from ./", function()
+        local ctx = test_helpers.create_context()
+        stub(ctx.fs, "file_exists")
+        stub(fs.sync, "file_exists")
+        stub(vim.fn, "glob")
+
+        vim.fn.glob.on_call_with(path.concat { ctx.cwd:get(), "./" } .. "**/*", false, true).returns {
+            path.concat { ctx.cwd:get(), "file1" },
+        }
+        fs.sync.file_exists.on_call_with(path.concat { ctx.cwd:get(), "file1" }).returns(true)
+
+        vim.fn.glob.on_call_with(path.concat { ctx.cwd:get(), "./subdir/" } .. "**/*", false, true).returns {
+            path.concat { ctx.cwd:get(), "subdir", "subfile1" },
+        }
+        fs.sync.file_exists.on_call_with(path.concat { ctx.cwd:get(), "file1" }).returns(true)
+        fs.sync.file_exists.on_call_with(path.concat { ctx.cwd:get(), "subdir", "subfile1" }).returns(true)
+
+        local result = link.share(
+            ctx,
+            {
+                share = {
+                    ["dir/"] = "./",
+                    ["subdir/"] = "./subdir/",
+                },
+            },
+            Purl.parse("pkg:dummy/package@v1.0.0"):get_or_throw(),
+            {
+                file = "file",
+            }
+        )
+
+        assert.same(
+            Result.success {
+                ["dir/file1"] = "file1",
+                ["subdir/subfile1"] = "subdir/subfile1",
+            },
+            result
+        )
+
+        assert.same({
+            ["dir/file1"] = "file1",
+            ["subdir/subfile1"] = "subdir/subfile1",
+        }, ctx.links.share)
+    end)
+
     it("should register share links", function()
         local ctx = test_helpers.create_context()
         stub(ctx.fs, "file_exists")

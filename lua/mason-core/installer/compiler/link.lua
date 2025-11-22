@@ -234,9 +234,10 @@ local function expand_file_spec(ctx, purl, source, file_spec_table)
                     --   gh_2.22.1_macOS_amd64/share/man/man1/gh-run.1        man/man1/gh-run.1
                     --   gh_2.22.1_macOS_amd64/share/man/man1/gh-ssh-key.1    man/man1/gh-run.1
                     --
+                    --
                     local file_dest = path.concat {
                         _.trim_end_matches("/", dest),
-                        file:sub(#source_path + 1),
+                        _.strip_prefix(vim.fs.normalize(source_path), file),
                     }
                     expanded_links[file_dest] = file
                 end
