@@ -171,7 +171,7 @@ end
 ---@async
 ---@private
 function InstallRunner:release_lock()
-    pcall(fs.async.unlink, self.handle.location:lockfile(self.handle.package.name))
+    pcall(fs.sync.unlink, self.handle.location:lockfile(self.handle.package.name))
 end
 
 ---@async
@@ -181,16 +181,16 @@ function InstallRunner:acquire_lock(force)
     local pkg = self.handle.package
     log.debug("Attempting to lock package", pkg)
     local lockfile = self.handle.location:lockfile(pkg.name)
-    if force ~= true and fs.async.file_exists(lockfile) then
+    if force ~= true and fs.sync.file_exists(lockfile) then
         log.error("Lockfile already exists.", pkg)
         return Result.failure(
             ("Lockfile exists, installation is already running in another process (pid: %s). Run with :MasonInstall --force to bypass."):format(
-                fs.async.read_file(lockfile)
+                fs.sync.read_file(lockfile)
             )
         )
     end
     a.scheduler()
-    fs.async.write_file(lockfile, vim.fn.getpid())
+    fs.sync.write_file(lockfile, vim.fn.getpid())
     log.debug("Wrote lockfile", pkg)
     return Result.success(lockfile)
 end

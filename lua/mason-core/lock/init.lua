@@ -101,12 +101,17 @@ function M.create_lockfile()
     return lockfile
 end
 
+function M.get_lockfile_path()
+    return settings.current.lock.file
+end
+
 ---@return Lockfile?
 function M.get_lockfile()
     local file = settings.current.lock.file
     if fs.sync.file_exists(file) then
         return require("mason-core.lock.parser").deserialize(file)
     end
+    error("No lockfile TODO FIXME")
 end
 
 local has_init = false

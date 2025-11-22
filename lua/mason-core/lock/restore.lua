@@ -1,11 +1,10 @@
+local EventEmitter = require "mason-core.EventEmitter"
 local FileRegistrySource = require "mason-registry.sources.file"
 local GitHubRegistrySource = require "mason-registry.sources.github"
 local LuaRegistrySource = require "mason-registry.sources.lua"
 local Optional = require "mason-core.optional"
 local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
-
-local M = {}
 
 local providers = {
     ---@param registry_info LockfileRegistryGitHub
@@ -44,34 +43,41 @@ local providers = {
     end,
 }
 
----@class LockfileInstallGroup
+---@class LockfileInstallGroup : EventEmitter
 ---@field packages table<Package, LockfilePackage>
----@field unavailable_packages table<string, string>
+---@field unavailable_packages table<string, { error: string, metadata: LockfilePackage }>
 local LockfileInstallGroup = {}
 LockfileInstallGroup.__index = LockfileInstallGroup
+setmetatable(LockfileInstallGroup, { __index = EventEmitter })
 
 ---@param packages table<Package, LockfilePackage>
----@param unavailable_packages table<string, string>
+---@param unavailable_packages table<string, { error: string, metadata: LockfilePackage }>
 function LockfileInstallGroup:new(packages, unavailable_packages)
     ---@type LockfileInstallGroup
-    local instance = {}
+    local instance = EventEmitter.new(self)
     setmetatable(instance, self)
     instance.packages = packages
     instance.unavailable_packages = unavailable_packages
+    instance.handles = {}
+    instance.installed = {
+        completed = {},
+        failed = {},
+    }
     return instance
 end
 
 function LockfileInstallGroup:install()
     for pkg, metadata in pairs(self.packages) do
-        print("Installing", pkg.name)
-        pkg:install({
+        self.handles[pkg] = pkg:install({
             no_lock = true,
             version = metadata.version,
-        }, function(success)
+        }, function(success, err)
             if success then
-                print(pkg.name, "succeeded!")
+                table.insert(self.installed.completed, pkg)
+                self:emit("progress", self.installed)
             else
-                print(pkg.name, "failed!")
+                table.insert(self.installed.failed, pkg)
+                self:emit("progress", self.installed)
             end
         end)
     end
@@ -108,6 +114,14 @@ function LockfileRestore:new(lockfile)
     return instance
 end
 
+function LockfileRestore:get_package_count()
+    return _.size(self.lockfile.body)
+end
+
+function LockfileRestore:get_packages()
+    return self.lockfile.body
+end
+
 ---@param registry_info LockfileRegistry
 ---@return RegistrySource
 function LockfileRestore:get_registry(registry_info)
@@ -123,7 +137,7 @@ end
 ---@async
 ---@param pkg_name string
 ---@param metadata LockfilePackage
-function LockfileRestore:get_package(pkg_name, metadata)
+function LockfileRestore:resolve_package(pkg_name, metadata)
     return Result.try(function(try)
         local ephemeral_registry = self:get_registry(metadata.registry)
         if not ephemeral_registry:is_installed() then
@@ -138,12 +152,15 @@ function LockfileRestore:prepare()
     local available = {}
     local unavailable = {}
     for pkg_name, metadata in pairs(self.lockfile.body) do
-        self:get_package(pkg_name, metadata)
+        self:resolve_package(pkg_name, metadata)
             :on_success(function(pkg)
                 available[pkg] = metadata
             end)
             :on_failure(function(err)
-                unavailable[pkg_name] = err
+                unavailable[pkg_name] = {
+                    error = err,
+                    metadata = metadata,
+                }
             end)
     end
     return LockfileInstallGroup:new(available, unavailable)
@@ -154,11 +171,19 @@ function LockfileRestore:cleanup()
         registry:uninstall()
     end
 end
+--
+-- require("mason-core.async").run_blocking(function()
+--     local registry = require "mason-registry"
+--     for _, pkg in ipairs(registry.get_all_packages()) do
+--         pkg:get_install_handle():if_present(function(handle)
+--             if not handle:is_closing() then
+--                 handle:terminate()
+--             end
+--         end)
+--     end
+--     local restore = LockfileRestore:new(require("mason-core.lock").get_lockfile())
+--     require("mason-core.lock.ui").open()
+--     require("mason-core.lock.ui").init(restore:prepare())
+-- end)
 
-require("mason-core.async").run_blocking(function()
-    local restore = LockfileRestore:new(require("mason-core.lock").get_lockfile())
-    restore:prepare():install()
-    -- restore:cleanup()
-end)
-
-return M
+return LockfileRestore

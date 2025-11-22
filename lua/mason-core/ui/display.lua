@@ -538,6 +538,26 @@ function M.new_view_only_win(name, filetype)
 
             return mutate_state, get_state
         end,
+        ---@generic T : table
+        ---@param initial_state T
+        ---@return fun(mutate_fn: fun(current_state: T)), fun(): T
+        reset_state = function(initial_state)
+            -- Unsubcribe from current state container.
+            unsubscribe(true)
+
+            mutate_state, get_state, unsubscribe = state.create_state_container(
+                initial_state,
+                debounced(function(new_state)
+                    draw(renderer(new_state))
+                end)
+            )
+
+            vim.schedule(function()
+                draw(renderer(get_state()))
+            end)
+
+            return mutate_state, get_state
+        end,
         ---@param opts WindowOpts
         init = function(opts)
             assert(renderer ~= nil, "No view function has been registered. Call .view() before .init().")
