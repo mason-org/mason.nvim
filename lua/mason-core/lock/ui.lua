@@ -27,12 +27,6 @@ local INITIAL_STATE = {
         unavailable_packages = {},
         ---@type table<Package, LockfilePackage>
         available_packages = {},
-        progress = {
-            ---@type Package[]
-            completed = {},
-            ---@type Package[]
-            failed = {},
-        },
     },
     ---@type { package: string, from_version: string?, to_version: string?, is_installed: boolean }[]?
     preview = nil,
@@ -60,7 +54,7 @@ local function truncate(str, max_len)
 end
 
 window.view(
----@param state RestoreUiState
+    ---@param state RestoreUiState
     function(state)
         return Ui.Node {
             Ui.Keybind("q", "CLOSE_WINDOW", nil, true),
@@ -68,25 +62,41 @@ window.view(
             Header(state),
             Ui.When(state.lockfile.is_loaded, function()
                 if state.restore.is_running then
-                    return Ui.CascadingStyleNode({ "CENTERED" }, {
+                    return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.HlTextNode(p.Bold "Restoring packages…"),
                         Ui.EmptyLine(),
                         Ui.EmptyLine(),
+                        -- Ui.Table {
+                        --     { p.Comment "Package" },
+                        --     unpack(vim.tbl_map(function(preview)
+                                -- local unavailable = state.restore.unavailable_packages[preview.package]
+                                -- return {
+                                --     unavailable and p.muted(preview.package) or p.none(preview.package),
+                                --     unavailable and p.Error(unavailable.error) or p.none "",
+                                -- }
+                        --     end, state.preview)),
+                        -- },
                         Ui.Table {
                             {
                                 p.Comment "Package",
-                                p.none " "
+                                p.Comment "From",
+                                p.Comment "To",
                             },
                             unpack(vim.tbl_map(function(preview)
+                                local is_same_version = preview.from_version == preview.to_version
+                                local unavailable = state.restore.unavailable_packages[preview.package]
+
                                 return {
-                                    p.Bold(preview.package) or p.muted(preview.package),
-                                    p.Comment "Initializing npm root…" or p.none "",
+                                    p.muted(preview.package),
+                                    p.muted(preview.from_version and truncate(preview.from_version, 16) or "-"),
+                                    p.muted(truncate(preview.to_version, 16)),
+                                    unavailable and p.Error(unavailable.error) or p.none "",
                                 }
                             end, state.preview)),
                         },
                     })
                 elseif state.restore.is_preparing then
-                    return Ui.CascadingStyleNode({ "CENTERED" }, {
+                    return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.HlTextNode(p.Bold "Retrieving package metadata…"),
                         Ui.EmptyLine(),
                         Ui.EmptyLine(),
@@ -107,7 +117,7 @@ window.view(
                         },
                     })
                 elseif state.preview then
-                    return Ui.CascadingStyleNode({ "CENTERED" }, {
+                    return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.Keybind(settings.current.ui.keymaps.update_all_packages, "CONFIRM_RESTORE", nil, true),
                         Ui.HlTextNode {
                             { p.Bold "Preview" },
@@ -130,20 +140,20 @@ window.view(
                                     preview.is_installed and p.none(preview.package) or p.Bold(preview.package),
                                     p.muted(preview.from_version and truncate(preview.from_version, 16) or "-"),
                                     is_same_version and p.muted(truncate(preview.to_version, 16))
-                                    or p.highlight(truncate(preview.to_version, 16)),
+                                        or p.highlight(truncate(preview.to_version, 16)),
                                 }
                             end, state.preview)),
                         },
                     })
                 else
-                    return Ui.CascadingStyleNode({ "CENTERED" }, {
+                    return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.HlTextNode(p.Bold "Loading..."),
                     })
                 end
             end),
             Ui.When(not state.lockfile.is_loaded, function()
                 if state.lockfile.error then
-                    return Ui.CascadingStyleNode({ "CENTERED" }, {
+                    return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.Keybind("R", "RESET", nil, true),
                         Ui.HlTextNode {
                             {
@@ -167,9 +177,6 @@ window.view(
         }
     end
 )
-
----@param progress { completed: Package[], failed: Package[] }
-local function handle_progress(progress) end
 
 local function init()
     mutate_state, get_state = window.reset_state(INITIAL_STATE)
@@ -220,18 +227,20 @@ local function restore()
     local restore = assert(get_state().restore.instance, "restore instance is nil")
     a.run(function()
         local group = restore:prepare()
-        group:on("progress", function(progress)
-            mutate_state(function(state)
-                state.restore.progress = progress
-            end)
-        end)
         mutate_state(function(state)
             state.restore.available_packages = group.packages
             state.restore.unavailable_packages = group.unavailable_packages
             state.restore.is_preparing = false
             state.restore.is_running = true
         end)
-        group:install()
+        group:install {
+            on_handle = function(handle)
+                print("GOT HANDLE", handle)
+            end,
+            on_completion = function(result)
+
+            end,
+        }
     end, function(success, error)
         if not success then
             mutate_state(function(state)

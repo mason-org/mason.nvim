@@ -54,7 +54,7 @@ setmetatable(LockfileInstallGroup, { __index = EventEmitter })
 ---@param unavailable_packages table<string, { error: string, metadata: LockfilePackage }>
 function LockfileInstallGroup:new(packages, unavailable_packages)
     ---@type LockfileInstallGroup
-    local instance = EventEmitter.new(self)
+    local instance = EventEmitter.new(self) -- TODO: probably not needed
     setmetatable(instance, self)
     instance.packages = packages
     instance.unavailable_packages = unavailable_packages
@@ -66,20 +66,26 @@ function LockfileInstallGroup:new(packages, unavailable_packages)
     return instance
 end
 
-function LockfileInstallGroup:install()
+---@param handlers { on_handle: fun(handle: InstallHandle), on_completion: fun(pkg: Package, success: boolean, result: any) }
+function LockfileInstallGroup:install(handlers)
     for pkg, metadata in pairs(self.packages) do
         self.handles[pkg] = pkg:install({
             no_lock = true,
             version = metadata.version,
         }, function(success, err)
+            completed = completed + 1
             if success then
                 table.insert(self.installed.completed, pkg)
-                self:emit("progress", self.installed)
             else
                 table.insert(self.installed.failed, pkg)
-                self:emit("progress", self.installed)
+            end
+            if handlers and handlers.on_completion then
+                handlers.on_completion(pkg, success, err)
             end
         end)
+        if handlers and handlers.on_handle then
+            handlers.on_handle(self.handles[pkg])
+        end
     end
 end
 
