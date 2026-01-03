@@ -67,20 +67,19 @@ function LockfileInstallGroup:new(packages, unavailable_packages)
 end
 
 ---@param handlers { on_handle: fun(handle: InstallHandle), on_completion: fun(pkg: Package, success: boolean, result: any) }
-function LockfileInstallGroup:install(handlers)
+function LockfileInstallGroup:install(handlers, callback)
     for pkg, metadata in pairs(self.packages) do
         self.handles[pkg] = pkg:install({
             no_lock = true,
             version = metadata.version,
-        }, function(success, err)
-            completed = completed + 1
+        }, function(success, result)
             if success then
                 table.insert(self.installed.completed, pkg)
             else
                 table.insert(self.installed.failed, pkg)
             end
             if handlers and handlers.on_completion then
-                handlers.on_completion(pkg, success, err)
+                handlers.on_completion(pkg, success, result)
             end
         end)
         if handlers and handlers.on_handle then

@@ -235,10 +235,10 @@ local function restore()
         end)
         group:install {
             on_handle = function(handle)
-                print("GOT HANDLE", handle)
+                print("on_handle", handle)
             end,
-            on_completion = function(result)
-
+            on_completion = function(pkg, success, result)
+                print("on_completion", pkg, success, result)
             end,
         }
     end, function(success, error)
