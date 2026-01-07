@@ -110,7 +110,6 @@ local function check_core_utils()
 
     if platform.is.unix then
         check { cmd = "bash", args = { "--version" }, name = "bash" }
-        check { cmd = "sh", name = "sh" }
     end
 
     if platform.is.win then
