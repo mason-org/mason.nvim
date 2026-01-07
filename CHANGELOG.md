@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/mason-org/mason.nvim/compare/v2.2.0...v2.2.1) (2026-01-07)
+
+
+### Bug Fixes
+
+* **registry:** exclude synthesized registry when updating/installing registries ([#2054](https://github.com/mason-org/mason.nvim/issues/2054)) ([3fce8bd](https://github.com/mason-org/mason.nvim/commit/3fce8bd25e773bae4267c9e8f2cfbfda22aeb017))
+
 ## [2.2.0](https://github.com/mason-org/mason.nvim/compare/v2.1.0...v2.2.0) (2026-01-07)
 
 
