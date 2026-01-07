@@ -49,7 +49,6 @@ function Registry.get_installed_package_names()
             directories[#directories + 1] = entry.name
         end
     end
-    -- TODO: validate that entry is a mason package
     return directories
 end
 
@@ -68,7 +67,10 @@ function Registry.get_all_package_names()
 end
 
 function Registry.get_all_packages()
-    return vim.tbl_map(Registry.get_package, Registry.get_all_package_names())
+    local _ = require "mason-core.functional"
+    local packages =
+        _.uniq_by(_.identity, _.concat(Registry.get_all_package_names(), Registry.get_installed_package_names()))
+    return vim.tbl_map(Registry.get_package, packages)
 end
 
 function Registry.get_all_package_specs()

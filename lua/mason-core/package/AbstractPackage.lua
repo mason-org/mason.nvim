@@ -6,7 +6,6 @@ local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
 local fs = require "mason-core.fs"
 local log = require "mason-core.log"
-local path = require "mason-core.path"
 local settings = require "mason.settings"
 local Semaphore = require("mason-core.async.control").Semaphore
 
@@ -166,15 +165,10 @@ end
 ---@return string?
 function AbstractPackage:get_installed_version(location)
     return self:get_receipt(location)
-        :and_then(
+        :map(
             ---@param receipt InstallReceipt
             function(receipt)
-                local source = receipt:get_source()
-                if source.id then
-                    return Purl.parse(source.id):map(_.prop "version"):ok()
-                else
-                    return Optional.empty()
-                end
+                return receipt:get_installed_package_version()
             end
         )
         :or_else(nil)
