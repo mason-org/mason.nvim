@@ -49,7 +49,7 @@ function SynthesizedRegistrySource:load_package(pkg_name, receipt)
         homepage = "",
         licenses = {},
         deprecation = {
-            since = receipt:get_installed_package_version() or "N/A",
+            since = installed_version or "N/A",
             message = "This package has been removed from the registry.",
         },
         source = source,

@@ -191,7 +191,9 @@ function LazySourceCollection:checksum()
     return vim.fn.sha256(table.concat(registry_ids, ""))
 end
 
----@param opts? { include_uninstalled?: boolean, include_synthesized?: boolean }
+---@alias LazySourceCollectionIterate { include_uninstalled?: boolean, include_synthesized?: boolean }
+
+---@param opts? LazySourceCollectionIterate
 function LazySourceCollection:iterate(opts)
     opts = opts or {}
 
@@ -213,7 +215,7 @@ function LazySourceCollection:iterate(opts)
     end
 end
 
----@param opts? { include_uninstalled?: boolean }
+---@param opts? LazySourceCollectionIterate
 function LazySourceCollection:to_list(opts)
     opts = opts or {}
     local list = {}
