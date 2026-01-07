@@ -43,7 +43,7 @@ function InstallHandleSpawnHandle:__tostring()
 end
 
 ---@class InstallHandle : EventEmitter
----@field package AbstractPackage
+---@field public package AbstractPackage
 ---@field state InstallHandleState
 ---@field stdio_sink BufferedSink
 ---@field is_terminated boolean
