@@ -112,11 +112,11 @@ local function Failed(state)
     end, failures))
 
     return Ui.Node {
-        Ui.HlTextNode(p.Bold "Failed"),
         Ui.HlTextNode {
+            { p.Bold "Failed" },
             {
                 p.Bold(tostring(#failures)),
-                p.none " packages failed to install. Press ",
+                p.none " packages failed to be restored. Press ",
                 p.highlight "R",
                 p.none " to retry.",
             },
@@ -177,15 +177,13 @@ window.view(
                             and state.restore.handle_state[preview.package] ~= "CLOSED"
                     end, state.preview)
 
-                    local col_width = math.max(unpack(_.map(_.compose(_.length, _.prop "package"), state.preview)))
-
                     return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.HlTextNode(p.Bold "Restoring packages…"),
                         Ui.EmptyLine(),
+                        Ui.EmptyLine(),
                         Ui.Table {
                             {
-                                -- hack to ensure the table retains its original width as we're removing rows from the table
-                                p.muted("Package" .. (" "):rep(col_width - #"Package")),
+                                p.muted "Package",
                                 p.muted "current",
                                 p.muted "target",
                                 p.none "",
@@ -207,6 +205,7 @@ window.view(
                     return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.HlTextNode(p.Bold "Retrieving package metadata…"),
                         Ui.EmptyLine(),
+                        Ui.EmptyLine(),
                         Ui.Table {
                             {
                                 p.muted "Package",
@@ -225,6 +224,7 @@ window.view(
                     })
                 elseif state.preview then
                     return Ui.CascadingStyleNode({ "INDENT" }, {
+                        Ui.Keybind(settings.current.ui.keymaps.update_all_packages, "CONFIRM_RESTORE", nil, true),
                         Ui.HlTextNode {
                             { p.Bold "Lockfile" },
                             {
@@ -233,15 +233,6 @@ window.view(
                                 p.none " to restore the following packages.",
                             },
                         },
-                        Ui.Keybind(settings.current.ui.keymaps.update_all_packages, "CONFIRM_RESTORE", nil, true),
-                        Ui.HlTextNode {
-                            {
-                                p.none "Press ",
-                                p.highlight "R",
-                                p.none " to reload lockfile.",
-                            },
-                        },
-                        Ui.Keybind("R", "RESET", nil, true),
                         Ui.EmptyLine(),
                         Ui.Table {
                             {
@@ -262,7 +253,7 @@ window.view(
                     })
                 else
                     return Ui.CascadingStyleNode({ "INDENT" }, {
-                        Ui.HlTextNode(p.Bold "Loading…"),
+                        Ui.HlTextNode(p.Bold "Loading..."),
                     })
                 end
             end),
@@ -288,7 +279,7 @@ window.view(
                         Ui.Keybind("R", "RESET", nil, true),
                     })
                 else
-                    -- TODO loading state. Not needed for now because parsing lockfile is synchronous.
+                    -- TODO loading message
                 end
             end),
         }
