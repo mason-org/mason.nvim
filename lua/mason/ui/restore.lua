@@ -1,1 +1,1 @@
-local restore = require("mason-core.lock.restore")
+local restore = require "mason-core.lock.restore"

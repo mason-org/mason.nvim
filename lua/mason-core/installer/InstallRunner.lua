@@ -39,7 +39,6 @@ local function pcallback(callback, ...)
     end
 end
 
-
 ---@param opts PackageInstallOpts
 ---@param callback? InstallRunnerCallback
 function InstallRunner:execute(opts, callback)

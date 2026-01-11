@@ -111,7 +111,7 @@ function M.get_lockfile()
     if fs.sync.file_exists(file) then
         return require("mason-core.lock.parser").deserialize(file)
     end
-    error("No lockfile TODO FIXME")
+    error "No lockfile TODO FIXME"
 end
 
 local has_init = false
