@@ -113,14 +113,6 @@ local function Failed(state)
 
     return Ui.Node {
         Ui.HlTextNode(p.Bold "Failed"),
-        Ui.HlTextNode {
-            {
-                p.Bold(tostring(#failures)),
-                p.none " packages failed to install. Press ",
-                p.highlight "R",
-                p.none " to retry.",
-            },
-        },
         Ui.Keybind("R", "RESET", nil, true),
         Ui.CascadingStyleNode({ "INDENT" }, {
             failed_list,
@@ -145,6 +137,23 @@ window.view(
                     end, state.preview)
 
                     return Ui.CascadingStyleNode({ "INDENT" }, {
+                        Ui.HlTextNode {
+                            {
+                                p.Bold(
+                                    ("Restored %d/%d packages in lockfile."):format(
+                                        #successful_packages,
+                                        #state.preview
+                                    )
+                                ),
+                            },
+                            {
+                                p.none "Press ",
+                                p.highlight "R",
+                                p.none " to reload lockfile.",
+                            },
+                        },
+                        Ui.Keybind("R", "RESET", nil, true),
+                        Ui.EmptyLine(),
                         Ui.When(has_failures, function()
                             return Ui.Node {
                                 Failed(state),
@@ -155,11 +164,7 @@ window.view(
                         Ui.CascadingStyleNode(
                             { "INDENT" },
                             vim.tbl_map(function(preview)
-                                local is_same_version = preview.from_version == preview.to_version
-                                local unavailable = state.restore.unavailable_packages[preview.package]
                                 local handle_state = state.restore.handle_state[preview.package]
-                                local is_active = handle_state == "ACTIVE"
-                                local package_name = handle_state == "ACTIVE" and p.Bold or p.muted
 
                                 return Ui.HlTextNode {
 
@@ -282,7 +287,7 @@ window.view(
                             {
                                 p.muted "Press ",
                                 p.highlight "R",
-                                p.muted " to retry",
+                                p.muted " to retry.",
                             },
                         },
                         Ui.Keybind("R", "RESET", nil, true),
@@ -430,13 +435,15 @@ window.init {
     },
 }
 
-init()
-window.open()
-
+local has_initialized = false
 return {
-    ---@param install_group LockfileInstallGroup
     init = init,
+    close = window.close,
     open = function()
+        if not has_initialized then
+            init()
+            has_initialized = true
+        end
         window.open()
     end,
 }
