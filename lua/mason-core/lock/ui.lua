@@ -1,5 +1,6 @@
 local LockfileRestore = require "mason-core.lock.restore"
 local Ui = require "mason-core.ui"
+local _ = require "mason-core.functional"
 local a = require "mason-core.async"
 local display = require "mason-core.ui.display"
 local lock = require "mason-core.lock"
@@ -27,6 +28,10 @@ local INITIAL_STATE = {
         unavailable_packages = {},
         ---@type table<Package, LockfilePackage>
         available_packages = {},
+        ---@type table<string, { tail: string, full: string[] }>
+        output = {},
+        ---@type table<string, InstallHandleState>
+        install_state = {},
     },
     ---@type { package: string, from_version: string?, to_version: string?, is_installed: boolean }[]?
     preview = nil,
@@ -66,31 +71,29 @@ window.view(
                         Ui.HlTextNode(p.Bold "Restoring packages…"),
                         Ui.EmptyLine(),
                         Ui.EmptyLine(),
-                        -- Ui.Table {
-                        --     { p.Comment "Package" },
-                        --     unpack(vim.tbl_map(function(preview)
-                                -- local unavailable = state.restore.unavailable_packages[preview.package]
-                                -- return {
-                                --     unavailable and p.muted(preview.package) or p.none(preview.package),
-                                --     unavailable and p.Error(unavailable.error) or p.none "",
-                                -- }
-                        --     end, state.preview)),
-                        -- },
                         Ui.Table {
                             {
                                 p.Comment "Package",
                                 p.Comment "From",
                                 p.Comment "To",
+                                p.none "",
                             },
                             unpack(vim.tbl_map(function(preview)
                                 local is_same_version = preview.from_version == preview.to_version
                                 local unavailable = state.restore.unavailable_packages[preview.package]
+                                local handle_state = state.restore.install_state[preview.package]
+                                local is_active = handle_state == "ACTIVE"
+                                local package_name = handle_state == "ACTIVE" and p.Bold or p.Comment
 
                                 return {
-                                    p.muted(preview.package),
+                                    is_active and p.Bold(preview.package) or p.none(preview.package),
                                     p.muted(preview.from_version and truncate(preview.from_version, 16) or "-"),
                                     p.muted(truncate(preview.to_version, 16)),
-                                    unavailable and p.Error(unavailable.error) or p.none "",
+                                    unavailable and p.Error(unavailable.error)
+                                        or (
+                                            is_active and p.Comment(state.restore.output[preview.package].tail)
+                                            or p.none ""
+                                        ),
                                 }
                             end, state.preview)),
                         },
@@ -219,6 +222,44 @@ local function init()
     end)
 end
 
+---@param handle InstallHandle
+local function setup_handle(handle)
+    mutate_state(function(state)
+        state.restore.output[handle.package.name] = { tail = "", full = { "" } }
+    end)
+
+    ---@param chunk string
+    local function handle_output(chunk)
+        mutate_state(function(state)
+            local output = state.restore.output[handle.package.name]
+            local lines = vim.split(chunk, "\n")
+            for i = 1, #lines do
+                local line = lines[i]
+                if i == 1 then
+                    output.full[#output.full] = output.full[#output.full] .. line
+                else
+                    output.full[#output.full + 1] = line
+                end
+                if not line:match "^%s*$" then
+                    output.tail = line:gsub("^%s+", "")
+                end
+            end
+        end)
+    end
+
+    local function handle_state_change(handle_state)
+        mutate_state(function(state)
+            state.restore.install_state[handle.package.name] = handle_state
+        end)
+    end
+
+    handle_state_change(handle.state)
+
+    handle:on("state:change", handle_state_change)
+    handle:on("stderr", handle_output)
+    handle:on("stdout", handle_output)
+end
+
 local function restore()
     mutate_state(function(state)
         state.restore.is_preparing = true
@@ -234,14 +275,10 @@ local function restore()
             state.restore.is_running = true
         end)
         group:install {
-            on_handle = function(handle)
-                print("on_handle", handle)
-            end,
-            on_completion = function(pkg, success, result)
-                print("on_completion", pkg, success, result)
-            end,
+            on_handle = setup_handle,
         }
     end, function(success, error)
+        restore:cleanup()
         if not success then
             mutate_state(function(state)
                 state.restore.error = tostring(error)

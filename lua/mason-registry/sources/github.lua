@@ -33,7 +33,8 @@ function GitHubRegistrySource:new(spec)
     ---@type GitHubRegistrySource
     local instance = {}
     setmetatable(instance, GitHubRegistrySource)
-    local root_dir = InstallLocation.global():registry(path.concat { "github", spec.namespace, spec.name, spec.version })
+    local root_dir = InstallLocation.global()
+        :registry(path.concat { "github", spec.namespace, spec.name, spec.version })
     instance.id = spec.id
     instance.spec = spec
     instance.repo = ("%s/%s"):format(spec.namespace, spec.name)
@@ -146,6 +147,7 @@ function GitHubRegistrySource:install()
 end
 
 function GitHubRegistrySource:uninstall()
+    log.debug("Uninstalling registry", self)
     if self.spec.version then
         fs.sync.rmrf(self.root_dir)
     else
@@ -181,7 +183,9 @@ end
 
 ---@param other GitHubRegistrySource
 function GitHubRegistrySource:is_same_location(other)
-    return self.spec.namespace == other.spec.namespace and self.spec.name == other.spec.name
+    return self.spec.namespace == other.spec.namespace
+        and self.spec.name == other.spec.name
+        and self.spec.version == other.spec.version
 end
 
 function GitHubRegistrySource:__tostring()

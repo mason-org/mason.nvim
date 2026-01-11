@@ -3,8 +3,10 @@ local FileRegistrySource = require "mason-registry.sources.file"
 local GitHubRegistrySource = require "mason-registry.sources.github"
 local LuaRegistrySource = require "mason-registry.sources.lua"
 local Optional = require "mason-core.optional"
+local Registry = require "mason-registry"
 local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
+local a = require "mason-core.async"
 
 local providers = {
     ---@param registry_info LockfileRegistryGitHub
@@ -66,26 +68,36 @@ function LockfileInstallGroup:new(packages, unavailable_packages)
     return instance
 end
 
+---@async
 ---@param handlers { on_handle: fun(handle: InstallHandle), on_completion: fun(pkg: Package, success: boolean, result: any) }
 function LockfileInstallGroup:install(handlers, callback)
-    for pkg, metadata in pairs(self.packages) do
-        self.handles[pkg] = pkg:install({
-            no_lock = true,
-            version = metadata.version,
-        }, function(success, result)
-            if success then
-                table.insert(self.installed.completed, pkg)
-            else
-                table.insert(self.installed.failed, pkg)
-            end
-            if handlers and handlers.on_completion then
-                handlers.on_completion(pkg, success, result)
-            end
+    local thunks = {}
+    local sorted_packages = _.sort_by(_.prop "name", _.keys(self.packages))
+    for __, pkg in ipairs(sorted_packages) do
+        table.insert(thunks, function()
+            local metadata = self.packages[pkg]
+            a.wait(function(resolve)
+                self.handles[pkg] = pkg:install({
+                    no_lock = true,
+                    version = metadata.version,
+                }, function(success, result)
+                    if success then
+                        table.insert(self.installed.completed, pkg)
+                    else
+                        table.insert(self.installed.failed, pkg)
+                    end
+                    if handlers and handlers.on_completion then
+                        handlers.on_completion(pkg, success, result)
+                    end
+                    resolve()
+                end)
+                if handlers and handlers.on_handle then
+                    handlers.on_handle(self.handles[pkg])
+                end
+            end)
         end)
-        if handlers and handlers.on_handle then
-            handlers.on_handle(self.handles[pkg])
-        end
     end
+    a.wait_all(thunks)
 end
 
 local RegistryCache = {
@@ -173,7 +185,9 @@ end
 
 function LockfileRestore:cleanup()
     for _, registry in pairs(self.registry_cache.github) do
-        registry:uninstall()
+        if not Registry.sources:contains(registry) then
+            registry:uninstall()
+        end
     end
 end
 --

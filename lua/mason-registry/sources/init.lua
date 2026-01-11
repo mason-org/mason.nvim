@@ -215,6 +215,17 @@ function LazySourceCollection:iterate(opts)
     end
 end
 
+---@param registry RegistrySource
+function LazySourceCollection:contains(registry)
+    for _, lazy_source in ipairs(self.list) do
+        local reg = lazy_source:get()
+        if getmetatable(reg) == getmetatable(registry) and registry:is_same_location(reg) then
+            return true
+        end
+    end
+    return false
+end
+
 ---@param opts? LazySourceCollectionIterate
 function LazySourceCollection:to_list(opts)
     opts = opts or {}
