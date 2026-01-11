@@ -26,10 +26,10 @@ local DEFAULT_SETTINGS = {
 
     lock = {
         ---@since 2.2.0
-        enabled = true,
+        enabled = false,
 
         ---@since 2.2.0
-        backup = true,
+        backup = false,
 
         ---@since 2.2.0
         file = vim.fs.joinpath(vim.fn.stdpath "config", "mason.lock"),

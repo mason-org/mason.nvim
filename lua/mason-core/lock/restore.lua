@@ -45,18 +45,17 @@ local providers = {
     end,
 }
 
----@class LockfileInstallGroup : EventEmitter
+---@class LockfileInstallGroup
 ---@field packages table<Package, LockfilePackage>
 ---@field unavailable_packages table<string, { error: string, metadata: LockfilePackage }>
 local LockfileInstallGroup = {}
 LockfileInstallGroup.__index = LockfileInstallGroup
-setmetatable(LockfileInstallGroup, { __index = EventEmitter })
 
 ---@param packages table<Package, LockfilePackage>
 ---@param unavailable_packages table<string, { error: string, metadata: LockfilePackage }>
 function LockfileInstallGroup:new(packages, unavailable_packages)
     ---@type LockfileInstallGroup
-    local instance = EventEmitter.new(self) -- TODO: probably not needed
+    local instance = {}
     setmetatable(instance, self)
     instance.packages = packages
     instance.unavailable_packages = unavailable_packages

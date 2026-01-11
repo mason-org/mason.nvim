@@ -27,6 +27,10 @@ function M.setup(config)
         Registry.sources:append(registry)
     end
 
+    if settings.current.lock.enabled then
+        require("mason-core.lock").init()
+    end
+
     require "mason.api.command"
     setup_autocmds()
     M.has_setup = true

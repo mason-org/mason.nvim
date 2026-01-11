@@ -4,9 +4,6 @@ local log = require "mason-core.log"
 local path = require "mason-core.path"
 local registry = require "mason-registry"
 local settings = require "mason.settings"
-local sources = require "mason-registry.sources"
-
-local LOCKFILE_BACKUP_DIR = path.concat { vim.fn.stdpath "cache", "mason", "lockfiles" }
 
 local M = {}
 
@@ -37,23 +34,29 @@ local M = {}
 ---@field header LockfileHeader
 ---@field body table<string, LockfilePackage>
 
+local LOCKFILE_BACKUP_DIR = path.concat { vim.fn.stdpath "cache", "mason", "lockfiles" }
+
 ---@param file string
 local function backup_lockfile(file)
     if not fs.sync.dir_exists(LOCKFILE_BACKUP_DIR) then
         fs.sync.mkdirp(LOCKFILE_BACKUP_DIR)
     end
-    -- TODO needs more unique name
-    local backup_file = path.concat { LOCKFILE_BACKUP_DIR, ("mason-%s.lock"):format(os.date "%Y%m%d") }
+    local base_backup_file = path.concat { LOCKFILE_BACKUP_DIR, ("mason-%s.lock"):format(os.date "%Y%m%d-%H%M%S") }
+    local backup_file = base_backup_file
+    local i = 1
+    while i < 10 and fs.sync.file_exists(backup_file) do
+        backup_file = base_backup_file .. "." .. i
+        i = i + 1
+    end
     fs.sync.copy_file(file, backup_file)
-    -- TODO gzip and rotate old backups?
     return backup_file
 end
 
----@param file string
 ---@param contents Lockfile
-function M.write_lockfile(file, contents)
+function M.write_lockfile(contents)
+    local file = settings.current.lock.file
     local parser = require "mason-core.lock.parser"
-    if fs.sync.file_exists(file) and settings.current.lock.backup then
+    if settings.current.lock.backup and fs.sync.file_exists(file) then
         backup_lockfile(file)
     end
     local lockfile_dir = vim.fs.dirname(settings.current.lock.file)
@@ -61,6 +64,22 @@ function M.write_lockfile(file, contents)
         fs.sync.mkdirp(lockfile_dir)
     end
     fs.sync.write_file(file, parser.serialize(contents))
+end
+
+---@param pkg Package
+---@return LockfilePackage
+local function generate_lockfile_entry(pkg)
+    local version = assert(pkg:get_installed_version(), "Unable to retrieve package version.")
+    local registry = pkg:get_receipt():map(_.prop "registry"):or_else_throw "Unable to retrieve registry from receipt."
+    if registry.proto == "github" then
+        registry.integrity = registry.version .. "~" .. registry.checksums["registry.json"]
+        registry.version = nil
+        registry.checksums = nil
+    end
+    return {
+        version = version,
+        registry = registry,
+    }
 end
 
 ---@return Lockfile
@@ -73,21 +92,11 @@ function M.generate_lockfile()
     }
 
     for __, pkg in ipairs(registry.get_installed_packages()) do
-        -- TODO error if not present
-        -- TODO also set registry, if registry is not in receipt do error
-        local version = pkg:get_installed_version()
-        if version then
-            pkg:get_receipt():map(_.prop "registry"):if_present(function(registry)
-                if registry.proto == "github" then
-                    registry.integrity = registry.version .. "~" .. registry.checksums["registry.json"]
-                    registry.version = nil
-                    registry.checksums = nil
-                end
-                lockfile.body[pkg.name] = {
-                    version = version,
-                    registry = registry,
-                }
-            end)
+        local ok, entry = pcall(generate_lockfile_entry, pkg)
+        if ok then
+            lockfile.body[pkg.name] = entry
+        else
+            log.warn("Unable to generate lockfile entry for", pkg, entry)
         end
     end
 
@@ -97,7 +106,7 @@ end
 function M.create_lockfile()
     local file = settings.current.lock.file
     local lockfile = M.generate_lockfile()
-    M.write_lockfile(file, lockfile)
+    M.write_lockfile(lockfile)
     return lockfile
 end
 
@@ -111,7 +120,6 @@ function M.get_lockfile()
     if fs.sync.file_exists(file) then
         return require("mason-core.lock.parser").deserialize(file)
     end
-    error "No lockfile TODO FIXME"
 end
 
 local has_init = false
@@ -126,28 +134,31 @@ function M.init()
         ---@param pkg Package
         ---@param receipt InstallReceipt
         _.scheduler_wrap(function(pkg, receipt)
-            if opts.lockfile == false or settings.current.lock.enabled == false then
+            if receipt:get_install_options().no_lock == true or settings.current.lock.enabled == false then
                 return
             end
-            pkg:get_installed_version():if_present(function(version)
-                local lockfile = M.get_lockfile() or M.create_lockfile()
-                lockfile.packages[pkg.name] = version
-                set_registries(lockfile)
-                M.write_lockfile(settings.current.lock.file, lockfile)
-            end)
+            local lockfile = M.get_lockfile() or M.create_lockfile()
+            local ok, entry = pcall(generate_lockfile_entry, pkg)
+            if ok then
+                lockfile.body[pkg.name] = entry
+                M.write_lockfile(lockfile)
+            else
+                log.error("Failed to generate lockfile entry for", pkg, entry)
+            end
         end)
     )
 
     registry:on(
         "package:uninstall:success",
         ---@param pkg Package
-        _.scheduler_wrap(function(pkg)
-            if opts.lockfile == false or settings.current.lock.enabled == false then
+        ---@param receipt InstallReceipt
+        _.scheduler_wrap(function(pkg, receipt)
+            if receipt:get_install_options().no_lock == true or settings.current.lock.enabled == false then
                 return
             end
             local lockfile = M.get_lockfile() or M.create_lockfile()
-            lockfile.packages[pkg.name] = nil
-            M.write_lockfile(settings.current.lock.file, lockfile)
+            lockfile.body[pkg.name] = nil
+            M.write_lockfile(lockfile)
         end)
     )
 end

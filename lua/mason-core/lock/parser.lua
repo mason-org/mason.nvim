@@ -1,3 +1,4 @@
+-- TODO fix this shit code
 local _ = require "mason-core.functional"
 local uv = vim.uv
 
@@ -23,7 +24,6 @@ local parser = function(thread, file)
         end
     end
 
-    local buffer = ""
     local fd = uv.fs_open(file, "r", tonumber("666", 8))
 
     local size = 100
@@ -175,7 +175,6 @@ local function to_file(data)
         output[#output + 1] = serialize(0, key, data.body[key])
         output[#output + 1] = { "" }
     end
-    output[#output + 1] = "# vi:sw=2"
 
     return _.join("\n", _.flatten(output))
 end
