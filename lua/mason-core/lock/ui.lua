@@ -20,6 +20,8 @@ local INITIAL_STATE = {
         is_loaded = false,
     },
     restore = {
+        ---@type string?
+        expanded_log = nil,
         ---@type nil | '"PREPARING"' | '"RUNNING"' | '"FINISHED"'
         state = nil,
         ---@type LockfileRestore?
@@ -63,26 +65,19 @@ end
 
 ---@param state RestoreUiState
 local function Failed(state)
-    local unavailable_packages = {}
+    local failures = {}
+
     for pkg_name, info in pairs(state.restore.unavailable_packages) do
-        table.insert(unavailable_packages, {
+        table.insert(failures, {
             name = pkg_name,
-            error = info.error,
+            tail = info.error,
+            log = { info.error },
         })
     end
-    local bajsfitta = Ui.HlTextNode(_.map(function(pkg)
-        local something = ("▶ # [1/1] %s"):format(pkg.error)
 
-        return {
-            p.none(pkg.name .. " "),
-            p.Comment(something),
-        }
-    end, unavailable_packages))
-
-    local failed_packages = {}
     for pkg_name, success in pairs(state.restore.install_succeeded) do
         if not success then
-            table.insert(failed_packages, {
+            table.insert(failures, {
                 name = pkg_name,
                 log = state.restore.output[pkg_name].full,
                 tail = state.restore.output[pkg_name].tail,
@@ -90,21 +85,36 @@ local function Failed(state)
         end
     end
 
-    local shitface = Ui.HlTextNode(_.map(function(pkg)
-        local log = state.restore.output[pkg.name]
-        local something = ("▶ # [%d/%d] %s"):format(#log.full, #log.full, log.tail)
+    local shitface = _.map(function(pkg)
+        local is_expanded = state.restore.expanded_log == pkg.name
+        local log_tail = is_expanded and p.bold "▼ Displaying full log"
+            or p.muted(("▶ # [%d/%d] %s"):format(#pkg.log, #pkg.log, pkg.tail))
 
-        return {
-            p.none(pkg.name .. " "),
-            p.Comment(something),
+        return Ui.Node {
+            Ui.HlTextNode {
+                {
+                    p.error(settings.current.ui.icons.package_uninstalled),
+                    p.none(" " .. pkg.name .. " "),
+                },
+            },
+            Ui.CascadingStyleNode({ "INDENT" }, {
+                Ui.HlTextNode(log_tail),
+                Ui.Keybind(settings.current.ui.keymaps.toggle_package_install_log, "TOGGLE_INSTALL_LOG", pkg.name),
+                Ui.When(is_expanded, function()
+                    return Ui.CascadingStyleNode({ "INDENT" }, {
+                        Ui.HlTextNode(_.map(function(line)
+                            return { p.muted(line) }
+                        end, pkg.log)),
+                    })
+                end),
+            }),
         }
-    end, failed_packages))
+    end, failures)
 
     return Ui.Node {
         Ui.HlTextNode(p.Bold "Failed"),
         Ui.CascadingStyleNode({ "INDENT" }, {
-            bajsfitta,
-            shitface,
+            Ui.Node(shitface),
         }),
     }
 end
@@ -140,44 +150,46 @@ window.view(
                                 local unavailable = state.restore.unavailable_packages[preview.package]
                                 local handle_state = state.restore.handle_state[preview.package]
                                 local is_active = handle_state == "ACTIVE"
-                                local package_name = handle_state == "ACTIVE" and p.Bold or p.Comment
+                                local package_name = handle_state == "ACTIVE" and p.Bold or p.muted
 
                                 return Ui.HlTextNode {
-                                    { p.none(preview.package .. "@" .. preview.to_version) },
+
+                                    {
+                                        p.highlight(settings.current.ui.icons.package_installed),
+                                        p.none(" " .. preview.package .. "@" .. preview.to_version),
+                                    },
                                 }
                             end, successful_packages)
                         ),
                     })
                 elseif state.restore.state == "RUNNING" then
+                    local unfinished_packages = vim.tbl_filter(function(preview)
+                        return not state.restore.unavailable_packages[preview.package]
+                            and state.restore.handle_state[preview.package] ~= "CLOSED"
+                    end, state.preview)
+
                     return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.HlTextNode(p.Bold "Restoring packages…"),
                         Ui.EmptyLine(),
                         Ui.EmptyLine(),
                         Ui.Table {
                             {
-                                p.Comment "Package",
-                                p.Comment "From",
-                                p.Comment "To",
+                                p.muted "Package",
+                                p.muted "current",
+                                p.muted "target",
                                 p.none "",
                             },
                             unpack(vim.tbl_map(function(preview)
-                                local is_same_version = preview.from_version == preview.to_version
-                                local unavailable = state.restore.unavailable_packages[preview.package]
                                 local handle_state = state.restore.handle_state[preview.package]
                                 local is_active = handle_state == "ACTIVE"
-                                local package_name = handle_state == "ACTIVE" and p.Bold or p.Comment
 
                                 return {
                                     is_active and p.Bold(preview.package) or p.none(preview.package),
                                     p.muted(preview.from_version and truncate(preview.from_version, 16) or "-"),
                                     p.muted(truncate(preview.to_version, 16)),
-                                    unavailable and p.Error(unavailable.error)
-                                        or (
-                                            is_active and p.Comment(state.restore.output[preview.package].tail)
-                                            or p.none ""
-                                        ),
+                                    is_active and p.muted(state.restore.output[preview.package].tail) or p.none "",
                                 }
-                            end, state.preview)),
+                            end, unfinished_packages)),
                         },
                     })
                 elseif state.restore.state == "PREPARING" then
@@ -187,9 +199,9 @@ window.view(
                         Ui.EmptyLine(),
                         Ui.Table {
                             {
-                                p.Comment "Package",
-                                p.Comment "From",
-                                p.Comment "To",
+                                p.muted "Package",
+                                p.muted "current",
+                                p.muted "target",
                             },
                             unpack(vim.tbl_map(function(preview)
                                 local is_same_version = preview.from_version == preview.to_version
@@ -205,19 +217,19 @@ window.view(
                     return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.Keybind(settings.current.ui.keymaps.update_all_packages, "CONFIRM_RESTORE", nil, true),
                         Ui.HlTextNode {
-                            { p.Bold "Preview" },
+                            { p.Bold "Lockfile" },
                             {
                                 p.none "Press ",
                                 p.highlight(settings.current.ui.keymaps.update_all_packages),
-                                p.none " to restore the following packages",
+                                p.none " to restore the following packages.",
                             },
                         },
                         Ui.EmptyLine(),
                         Ui.Table {
                             {
-                                p.Comment "Package",
-                                p.Comment "From",
-                                p.Comment "To",
+                                p.muted "Package",
+                                p.muted "current",
+                                p.muted "target",
                             },
                             unpack(vim.tbl_map(function(preview)
                                 local is_same_version = preview.from_version == preview.to_version
@@ -251,7 +263,9 @@ window.view(
                         Ui.EmptyLine(),
                         Ui.HlTextNode {
                             {
-                                p.Comment "Press R to retry",
+                                p.muted "Press ",
+                                p.highlight "R",
+                                p.muted " to retry",
                             },
                         },
                     })
@@ -376,11 +390,22 @@ local function restore()
     end)
 end
 
+local function toggle_install_log(event)
+    mutate_state(function(state)
+        if state.restore.expanded_log == event.payload then
+            state.restore.expanded_log = nil
+        else
+            state.restore.expanded_log = event.payload
+        end
+    end)
+end
+
 window.init {
     effects = {
         CLOSE_WINDOW = window.close,
         RESET = init,
         CONFIRM_RESTORE = restore,
+        TOGGLE_INSTALL_LOG = toggle_install_log,
     },
     winhighlight = {
         "NormalFloat:MasonNormal",
