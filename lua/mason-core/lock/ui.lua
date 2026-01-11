@@ -4,6 +4,7 @@ local _ = require "mason-core.functional"
 local a = require "mason-core.async"
 local display = require "mason-core.ui.display"
 local lock = require "mason-core.lock"
+local log = require "mason-core.log"
 local p = require "mason.ui.palette"
 local registry = require "mason-registry"
 local settings = require "mason.settings"
@@ -19,8 +20,8 @@ local INITIAL_STATE = {
         is_loaded = false,
     },
     restore = {
-        is_preparing = false,
-        is_running = false,
+        ---@type nil | '"PREPARING"' | '"RUNNING"' | '"FINISHED"'
+        state = nil,
         ---@type LockfileRestore?
         instance = nil,
         error = nil,
@@ -31,7 +32,9 @@ local INITIAL_STATE = {
         ---@type table<string, { tail: string, full: string[] }>
         output = {},
         ---@type table<string, InstallHandleState>
-        install_state = {},
+        handle_state = {},
+        ---@type table<string, boolean>
+        install_succeeded = {},
     },
     ---@type { package: string, from_version: string?, to_version: string?, is_installed: boolean }[]?
     preview = nil,
@@ -66,9 +69,18 @@ window.view(
             Ui.Keybind("<Esc>", "CLOSE_WINDOW", nil, true),
             Header(state),
             Ui.When(state.lockfile.is_loaded, function()
-                if state.restore.is_running then
+                if state.restore.state == "FINISHED" then
+                    local has_failures = _.size(state.restore.unavailable_packages) > 0
+                        or _.any(_.equals(false), vim.tbl_values(state.restore.install_succeeded))
+
                     return Ui.CascadingStyleNode({ "INDENT" }, {
-                        Ui.HlTextNode(p.Bold "Restoring packages…"),
+                        Ui.HlTextNode {
+                            {
+                                p.none "Successfully restored ",
+                                p.highlight("1337"),
+                                p.none " packages.",
+                            },
+                        },
                         Ui.EmptyLine(),
                         Ui.EmptyLine(),
                         Ui.Table {
@@ -81,7 +93,7 @@ window.view(
                             unpack(vim.tbl_map(function(preview)
                                 local is_same_version = preview.from_version == preview.to_version
                                 local unavailable = state.restore.unavailable_packages[preview.package]
-                                local handle_state = state.restore.install_state[preview.package]
+                                local handle_state = state.restore.handle_state[preview.package]
                                 local is_active = handle_state == "ACTIVE"
                                 local package_name = handle_state == "ACTIVE" and p.Bold or p.Comment
 
@@ -98,7 +110,39 @@ window.view(
                             end, state.preview)),
                         },
                     })
-                elseif state.restore.is_preparing then
+                elseif state.restore.state == "RUNNING" then
+                    return Ui.CascadingStyleNode({ "INDENT" }, {
+                        Ui.HlTextNode(p.Bold "Restoring packages…"),
+                        Ui.EmptyLine(),
+                        Ui.EmptyLine(),
+                        Ui.Table {
+                            {
+                                p.Comment "Package",
+                                p.Comment "From",
+                                p.Comment "To",
+                                p.none "",
+                            },
+                            unpack(vim.tbl_map(function(preview)
+                                local is_same_version = preview.from_version == preview.to_version
+                                local unavailable = state.restore.unavailable_packages[preview.package]
+                                local handle_state = state.restore.handle_state[preview.package]
+                                local is_active = handle_state == "ACTIVE"
+                                local package_name = handle_state == "ACTIVE" and p.Bold or p.Comment
+
+                                return {
+                                    is_active and p.Bold(preview.package) or p.none(preview.package),
+                                    p.muted(preview.from_version and truncate(preview.from_version, 16) or "-"),
+                                    p.muted(truncate(preview.to_version, 16)),
+                                    unavailable and p.Error(unavailable.error)
+                                        or (
+                                            is_active and p.Comment(state.restore.output[preview.package].tail)
+                                            or p.none ""
+                                        ),
+                                }
+                            end, state.preview)),
+                        },
+                    })
+                elseif state.restore.state == "PREPARING" then
                     return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.HlTextNode(p.Bold "Retrieving package metadata…"),
                         Ui.EmptyLine(),
@@ -249,7 +293,7 @@ local function setup_handle(handle)
 
     local function handle_state_change(handle_state)
         mutate_state(function(state)
-            state.restore.install_state[handle.package.name] = handle_state
+            state.restore.handle_state[handle.package.name] = handle_state
         end)
     end
 
@@ -262,7 +306,7 @@ end
 
 local function restore()
     mutate_state(function(state)
-        state.restore.is_preparing = true
+        state.restore.state = "PREPARING"
     end)
     ---@type LockfileRestore
     local restore = assert(get_state().restore.instance, "restore instance is nil")
@@ -271,19 +315,26 @@ local function restore()
         mutate_state(function(state)
             state.restore.available_packages = group.packages
             state.restore.unavailable_packages = group.unavailable_packages
-            state.restore.is_preparing = false
-            state.restore.is_running = true
+            state.restore.state = "RUNNING"
         end)
         group:install {
             on_handle = setup_handle,
+            on_completion = function(pkg, success)
+                mutate_state(function(state)
+                    state.restore.install_succeeded[pkg.name] = success
+                end)
+            end,
         }
-    end, function(success, error)
-        restore:cleanup()
-        if not success then
+    end, function(success, err)
+        vim.schedule(function()
+            restore:cleanup()
+        end)
+        if success then
             mutate_state(function(state)
-                state.restore.error = tostring(error)
+                state.restore.state = "FINISHED"
             end)
         end
+        log.error("Lockfile restore errored with unexpected error", err)
     end)
 end
 
