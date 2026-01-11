@@ -61,6 +61,54 @@ local function truncate(str, max_len)
     end
 end
 
+---@param state RestoreUiState
+local function Failed(state)
+    local unavailable_packages = {}
+    for pkg_name, info in pairs(state.restore.unavailable_packages) do
+        table.insert(unavailable_packages, {
+            name = pkg_name,
+            error = info.error,
+        })
+    end
+    local bajsfitta = Ui.HlTextNode(_.map(function(pkg)
+        local something = ("▶ # [1/1] %s"):format(pkg.error)
+
+        return {
+            p.none(pkg.name .. " "),
+            p.Comment(something),
+        }
+    end, unavailable_packages))
+
+    local failed_packages = {}
+    for pkg_name, success in pairs(state.restore.install_succeeded) do
+        if not success then
+            table.insert(failed_packages, {
+                name = pkg_name,
+                log = state.restore.output[pkg_name].full,
+                tail = state.restore.output[pkg_name].tail,
+            })
+        end
+    end
+
+    local shitface = Ui.HlTextNode(_.map(function(pkg)
+        local log = state.restore.output[pkg.name]
+        local something = ("▶ # [%d/%d] %s"):format(#log.full, #log.full, log.tail)
+
+        return {
+            p.none(pkg.name .. " "),
+            p.Comment(something),
+        }
+    end, failed_packages))
+
+    return Ui.Node {
+        Ui.HlTextNode(p.Bold "Failed"),
+        Ui.CascadingStyleNode({ "INDENT" }, {
+            bajsfitta,
+            shitface,
+        }),
+    }
+end
+
 window.view(
     ---@param state RestoreUiState
     function(state)
@@ -73,42 +121,32 @@ window.view(
                     local has_failures = _.size(state.restore.unavailable_packages) > 0
                         or _.any(_.equals(false), vim.tbl_values(state.restore.install_succeeded))
 
+                    local successful_packages = vim.tbl_filter(function(preview_item)
+                        return state.restore.install_succeeded[preview_item.package]
+                    end, state.preview)
+
                     return Ui.CascadingStyleNode({ "INDENT" }, {
-                        Ui.HlTextNode {
-                            {
-                                p.none "Successfully restored ",
-                                p.highlight("1337"),
-                                p.none " packages.",
-                            },
-                        },
-                        Ui.EmptyLine(),
-                        Ui.EmptyLine(),
-                        Ui.Table {
-                            {
-                                p.Comment "Package",
-                                p.Comment "From",
-                                p.Comment "To",
-                                p.none "",
-                            },
-                            unpack(vim.tbl_map(function(preview)
+                        Ui.When(has_failures, function()
+                            return Ui.Node {
+                                Failed(state),
+                                Ui.EmptyLine(),
+                            }
+                        end),
+                        Ui.HlTextNode(p.Bold "Installed"),
+                        Ui.CascadingStyleNode(
+                            { "INDENT" },
+                            vim.tbl_map(function(preview)
                                 local is_same_version = preview.from_version == preview.to_version
                                 local unavailable = state.restore.unavailable_packages[preview.package]
                                 local handle_state = state.restore.handle_state[preview.package]
                                 local is_active = handle_state == "ACTIVE"
                                 local package_name = handle_state == "ACTIVE" and p.Bold or p.Comment
 
-                                return {
-                                    is_active and p.Bold(preview.package) or p.none(preview.package),
-                                    p.muted(preview.from_version and truncate(preview.from_version, 16) or "-"),
-                                    p.muted(truncate(preview.to_version, 16)),
-                                    unavailable and p.Error(unavailable.error)
-                                        or (
-                                            is_active and p.Comment(state.restore.output[preview.package].tail)
-                                            or p.none ""
-                                        ),
+                                return Ui.HlTextNode {
+                                    { p.none(preview.package .. "@" .. preview.to_version) },
                                 }
-                            end, state.preview)),
-                        },
+                            end, successful_packages)
+                        ),
                     })
                 elseif state.restore.state == "RUNNING" then
                     return Ui.CascadingStyleNode({ "INDENT" }, {
