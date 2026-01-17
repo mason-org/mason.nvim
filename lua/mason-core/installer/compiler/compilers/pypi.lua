@@ -7,6 +7,7 @@ local M = {}
 
 ---@class PypiSource : RegistryPackageSource
 ---@field extra_packages? string[]
+---@field supported_platforms? string[]
 
 ---@param source PypiSource
 ---@param purl Purl
@@ -20,6 +21,7 @@ function M.parse(source, purl)
         pip = {
             upgrade = settings.current.pip.upgrade_pip,
             extra_args = settings.current.pip.install_args,
+            use_uv = settings.current.pip.use_uv,
         },
     }
 

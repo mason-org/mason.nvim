@@ -31,6 +31,7 @@ describe("pypi compiler :: parsing", function()
                 pip = {
                     upgrade = true,
                     extra_args = { "--proxy", "http://localghost" },
+                    use_uv = false,
                 },
             },
             pypi.parse({ extra_packages = { "extra" } }, purl())
