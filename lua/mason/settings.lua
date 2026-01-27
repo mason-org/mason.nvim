@@ -55,6 +55,12 @@ local DEFAULT_SETTINGS = {
         download_url_template = "https://github.com/%s/releases/download/%s/%s",
     },
 
+    npm = {
+        ---@since 2.0.0
+        -- Use `pnpm` instead of `npm` to install node packages
+        use_pnpm = false,
+    },
+
     pip = {
         ---@since 1.0.0
         -- Whether to upgrade pip to the latest version in the virtual environment before installing packages.
