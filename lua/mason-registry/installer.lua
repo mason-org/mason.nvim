@@ -40,7 +40,7 @@ function M.install(sources, on_progress)
     M.channel = OneShotChannel:new()
 
     local finished_registries = {}
-    local registries = sources:to_list { include_uninstalled = true }
+    local registries = sources:to_list { include_uninstalled = true, include_synthesized = false }
 
     local results = {
         a.wait_all(_.map(

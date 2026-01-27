@@ -1,3 +1,7 @@
+local Optional = require "mason-core.optional"
+local Purl = require "mason-core.purl"
+local _ = require "mason-core.functional"
+
 local M = {}
 
 ---@alias InstallReceiptSchemaVersion
@@ -39,6 +43,14 @@ end
 
 function InstallReceipt:get_name()
     return self.name
+end
+
+---@return string?
+function InstallReceipt:get_installed_package_version()
+    local source = self:get_source()
+    if source.id then
+        return Purl.parse(source.id):map(_.prop "version"):get_or_nil()
+    end
 end
 
 function InstallReceipt:get_schema_version()

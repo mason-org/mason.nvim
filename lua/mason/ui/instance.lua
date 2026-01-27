@@ -660,7 +660,7 @@ end
 
 local function update_registry_info()
     local registries = {}
-    for source in registry.sources:iterate { include_uninstalled = true } do
+    for source in registry.sources:iterate { include_uninstalled = true, include_synthesized = false } do
         table.insert(registries, {
             name = source:get_display_name(),
             is_installed = source:is_installed(),

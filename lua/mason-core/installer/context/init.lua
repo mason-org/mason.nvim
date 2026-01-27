@@ -17,7 +17,7 @@ local receipt = require "mason-core.receipt"
 ---@field location InstallLocation
 ---@field spawn InstallContextSpawn
 ---@field handle InstallHandle
----@field package AbstractPackage
+---@field public package AbstractPackage
 ---@field cwd InstallContextCwd
 ---@field opts PackageInstallOpts
 ---@field stdio_sink StdioSink
