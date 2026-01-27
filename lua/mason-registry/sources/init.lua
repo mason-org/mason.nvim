@@ -11,7 +11,7 @@ local log = require "mason-core.log"
 ---@field serialize fun(self: RegistrySource): InstallReceiptRegistry
 ---@field is_same_location fun(self: RegistrySource, other: RegistrySource): boolean
 
----@alias RegistrySourceType '"github"' | '"lua"' | '"file"'
+---@alias RegistrySourceType '"github"' | '"lua"' | '"file"' | '"synthesized"'
 
 ---@class LazySource
 ---@field type RegistrySourceType
@@ -52,6 +52,11 @@ function LazySource.File(id)
         id = id,
         path = id,
     }
+end
+
+function LazySource.Synthesized()
+    local SynthesizedSource = require "mason-registry.sources.synthesized"
+    return SynthesizedSource:new()
 end
 
 ---@param type RegistrySourceType
@@ -115,6 +120,7 @@ end
 
 ---@class LazySourceCollection
 ---@field list LazySource[]
+---@field synthesized LazySource
 local LazySourceCollection = {}
 LazySourceCollection.__index = LazySourceCollection
 
@@ -123,6 +129,7 @@ function LazySourceCollection:new()
     local instance = {}
     setmetatable(instance, self)
     instance.list = {}
+    instance.synthesized = LazySource:new("synthesized", "synthesized", LazySource.Synthesized)
     return instance
 end
 
@@ -184,7 +191,9 @@ function LazySourceCollection:checksum()
     return vim.fn.sha256(table.concat(registry_ids, ""))
 end
 
----@param opts? { include_uninstalled?: boolean }
+---@alias LazySourceCollectionIterate { include_uninstalled?: boolean, include_synthesized?: boolean }
+
+---@param opts? LazySourceCollectionIterate
 function LazySourceCollection:iterate(opts)
     opts = opts or {}
 
@@ -197,10 +206,16 @@ function LazySourceCollection:iterate(opts)
                 return source
             end
         end
+
+        -- We've exhausted the true registry sources, fall back to the synthesized registry source.
+        if idx == #self.list + 1 and opts.include_synthesized ~= false then
+            idx = idx + 1
+            return self.synthesized:get()
+        end
     end
 end
 
----@param opts? { include_uninstalled?: boolean }
+---@param opts? LazySourceCollectionIterate
 function LazySourceCollection:to_list(opts)
     opts = opts or {}
     local list = {}
