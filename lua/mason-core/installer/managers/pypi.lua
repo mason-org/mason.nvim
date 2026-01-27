@@ -9,6 +9,7 @@ local pep440 = require "mason-core.pep440"
 local platform = require "mason-core.platform"
 local providers = require "mason-core.providers"
 local semver = require "mason-core.semver"
+local settings = require "mason.settings"
 local spawn = require "mason-core.spawn"
 
 local M = {}
@@ -85,6 +86,9 @@ local function create_venv(pkg)
 
     -- 1. Resolve stock python3 installation.
     local stock_candidates = platform.is.win and { "python", "python3" } or { "python3", "python" }
+    if settings.current.pip.use_python3_host_prog and vim.g.python3_host_prog then
+        table.insert(stock_candidates, 1, vim.g.python3_host_prog)
+    end
     local stock_target = resolve_python3(stock_candidates)
     if stock_target then
         log.fmt_debug("Resolved stock python3 installation version %s", stock_target.version)
