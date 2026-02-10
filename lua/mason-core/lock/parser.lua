@@ -14,9 +14,9 @@ local function split_once_left(str, char)
     return str
 end
 
-local parser = function(thread, file)
+local function file_producer(consumer_thread, file)
     local function resume(val)
-        local ok, value = coroutine.resume(thread, val)
+        local ok, value = coroutine.resume(consumer_thread, val)
         if not ok then
             error(value)
         else
@@ -78,72 +78,79 @@ local function buffered()
     end
 end
 
-local function deserialize(file)
-    local thread = coroutine.create(function()
-        local header = nil
-        local body = {}
-        local cursor = { body }
+local parse_consumer = coroutine.create(function()
+    local header = nil
+    local body = {}
+    local cursor = { body }
 
-        for line_no, line in buffered() do
-            local indentation = #line:match "^%s*"
-            local indent_level = indentation / 2
-            local current_indent_level = (#cursor - 1)
-            if math.fmod(indentation, 2) ~= 0 or indent_level > current_indent_level then
-                error(("Invalid indentation on line %s."):format(line_no))
-            end
-
-            if _.matches("^%s*$", line) then
-                -- empty line
-            elseif _.matches("^%s*#", line) then
-                -- comment
-            elseif _.matches("^---$", line) then
-                -- header
-                assert(header == nil, ("Duplicate headers in document on line %s."):format(line_no))
-                header = body
-                body = {}
-                cursor = { body }
-            else
-                if indent_level < current_indent_level then
-                    cursor = _.take(indent_level + 1, cursor)
-                end
-                local key, val = split_once_left(line:sub(indentation + 1), " ")
-                if val then
-                    cursor[#cursor][key] = val
-                else
-                    cursor[#cursor][key] = {}
-                    cursor[#cursor + 1] = cursor[#cursor][key]
-                end
-            end
+    for line_no, line in buffered() do
+        print(line_no, line)
+        local indentation = #line:match "^%s*"
+        local indent_level = indentation / 2
+        local current_indent_level = (#cursor - 1)
+        if math.fmod(indentation, 2) ~= 0 or indent_level > current_indent_level then
+            error(("Invalid indentation on line %s."):format(line_no))
         end
 
-        ---@type Lockfile
-        local lockfile = {
-            header = header,
-            body = body,
-        }
-
-        assert(lockfile.header and lockfile.header.version, "Header and version missing.")
-        assert(lockfile.header.version == "1", "Unknown lockfile version.")
-        for pkg_name, metadata in pairs(lockfile.body) do
-            assert(metadata.version, "Missing version field.")
-            assert(metadata.registry, "Missing registry field.")
-            local registry = metadata.registry
-            if registry.proto == "github" then
-                assert(registry.integrity, "integrity field missing")
-                assert(registry.name, "name field missing")
-                assert(registry.namespace, "namespace field missing")
-            elseif registry.proto == "file" then
-                assert(registry.path, "path field missing")
-            elseif registry.proto == "lua" then
-                assert(registry.mod, "mod field missing")
+        if _.matches("^%s*$", line) then
+            -- empty line
+        elseif _.matches("^%s*#", line) then
+            -- comment
+        elseif _.matches("^---$", line) then
+            -- header
+            assert(header == nil, ("Duplicate headers in document on line %s."):format(line_no))
+            header = body
+            body = {}
+            cursor = { body }
+        else
+            if indent_level < current_indent_level then
+                cursor = _.take(indent_level + 1, cursor)
+            end
+            local key, val = split_once_left(line:sub(indentation + 1), " ")
+            if val then
+                cursor[#cursor][key] = val
             else
-                error "Unknown registry protocol."
+                cursor[#cursor][key] = {}
+                cursor[#cursor + 1] = cursor[#cursor][key]
             end
         end
+    end
 
-        return lockfile
-    end)
-    return parser(thread, file)
+    ---@type Lockfile
+    local lockfile = {
+        header = header,
+        body = body,
+    }
+
+    assert(lockfile.header and lockfile.header.version, "Header and version missing.")
+    assert(lockfile.header.version == "1", "Unknown lockfile version.")
+    for pkg_name, metadata in pairs(lockfile.body) do
+        assert(metadata.version, "Missing version field.")
+        assert(metadata.registry, "Missing registry field.")
+        local registry = metadata.registry
+        if registry.proto == "github" then
+            assert(registry.integrity, "integrity field missing")
+            assert(registry.name, "name field missing")
+            assert(registry.namespace, "namespace field missing")
+        elseif registry.proto == "file" then
+            assert(registry.path, "path field missing")
+        elseif registry.proto == "lua" then
+            assert(registry.mod, "mod field missing")
+        else
+            error "Unknown registry protocol."
+        end
+    end
+
+    return lockfile
+end)
+
+local function deserialize_file(file)
+    return file_producer(parse_consumer, file)
+end
+
+local function deserialize(contents)
+    coroutine.resume(parse_consumer)
+    return coroutine.resume(parse_consumer)
 end
 
 local function to_file(data)
@@ -181,5 +188,6 @@ end
 
 return {
     deserialize = deserialize,
+    deserialize_file = deserialize_file,
     serialize = to_file,
 }
