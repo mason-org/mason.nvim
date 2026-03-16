@@ -78,13 +78,12 @@ local function get_versioned_candidates(supported_python_versions)
         end
         return Optional.of(executable)
     end, {
+        { semver.new "3.14.0", "python3.14" },
+        { semver.new "3.13.0", "python3.13" },
         { semver.new "3.12.0", "python3.12" },
         { semver.new "3.11.0", "python3.11" },
         { semver.new "3.10.0", "python3.10" },
-        { semver.new "3.9.0", "python3.9" },
-        { semver.new "3.8.0", "python3.8" },
-        { semver.new "3.7.0", "python3.7" },
-        { semver.new "3.6.0", "python3.6" },
+        -- the rest are EOL
     })
 end
 
