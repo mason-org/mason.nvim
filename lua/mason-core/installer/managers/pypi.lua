@@ -33,11 +33,20 @@ local function resolve_python3(candidates)
     a.scheduler()
     local available_candidates = _.filter(is_executable, candidates)
     for __, candidate in ipairs(available_candidates) do
-        ---@type string
-        local version_output = spawn[candidate]({ "--version" }):map(_.prop "stdout"):get_or_else ""
-        local ok, version = pcall(semver.new, version_output:match "Python (3%.%d+.%d+)")
-        if ok then
-            return { executable = candidate, version = version }
+        if use_uv and candidate == "uv" then
+            ---@type string
+            local version_output = spawn[candidate]({ "--version" }):map(_.prop "stdout"):get_or_else ""
+            local ok, version = pcall(semver.new, version_output:match "uv (%d+.%d+.%d+).*")
+            if ok then
+                return { executable = candidate, version = version }
+            end
+        elseif not use_uv then
+            ---@type string
+            local version_output = spawn[candidate]({ "--version" }):map(_.prop "stdout"):get_or_else ""
+            local ok, version = pcall(semver.new, version_output:match "Python (3%.%d+.%d+)")
+            if ok then
+                return { executable = candidate, version = version }
+            end
         end
     end
     return nil
@@ -88,6 +97,9 @@ local function create_venv(pkg)
 
     -- 1. Resolve stock python3 installation.
     local stock_candidates = platform.is.win and { "python", "python3" } or { "python3", "python" }
+    if use_uv then
+        table.insert(stock_candidates, 1, "uv")
+    end
     local stock_target = resolve_python3(stock_candidates)
     if stock_target then
         log.fmt_debug("Resolved stock python3 installation version %s", stock_target.version)
@@ -95,6 +107,9 @@ local function create_venv(pkg)
 
     -- 2. Resolve suitable versioned python3 installation (python3.12, python3.11, etc.).
     local versioned_candidates = {}
+    if use_uv then
+        table.insert(versioned_candidates, "uv")
+    end
     if supported_python_versions ~= nil then
         if stock_target and not pep440_check_version(tostring(stock_target.version), supported_python_versions) then
             log.fmt_debug("Finding versioned candidates for %s", supported_python_versions)
@@ -114,7 +129,8 @@ local function create_venv(pkg)
     -- 3. If a versioned python3 installation was not found, warn the user if the stock python3 installation is outside
     -- the supported version range.
     if
-        target == stock_target
+        use_uv == false
+        and target == stock_target
         and supported_python_versions ~= nil
         and not pep440_check_version(tostring(target.version), supported_python_versions)
     then
@@ -136,9 +152,14 @@ local function create_venv(pkg)
         end
     end
 
-    log.fmt_debug("Found python3 installation version=%s, executable=%s", target.version, target.executable)
     ctx.stdio_sink:stdout "Creating virtual environment…\n"
-    return ctx.spawn[target.executable] { "-m", "venv", "--system-site-packages", VENV_DIR }
+    if use_uv then
+        log.fmt_debug("Found uv installation version=%s, executable=%s", target.version, target.executable)
+        return ctx.spawn[target.executable] { "venv", VENV_DIR }
+    else
+        log.fmt_debug("Found python3 installation version=%s, executable=%s", target.version, target.executable)
+        return ctx.spawn[target.executable] { "-m", "venv", "--system-site-packages", VENV_DIR }
+    end
 end
 
 ---@param ctx InstallContext
@@ -165,8 +186,11 @@ end
 ---@param args SpawnArgs
 local function venv_python(args)
     local ctx = installer.context()
-    return find_venv_executable(ctx, "python"):and_then(function(bin_path)
-        return ctx.spawn[path.concat { ctx.cwd:get(), bin_path }](args)
+    if use_uv then
+        return ctx.spawn["uv"](args)
+    end
+    return find_venv_executable(ctx, "python"):and_then(function(python_path)
+        return ctx.spawn[path.concat { ctx.cwd:get(), python_path }](args)
     end)
 end
 
@@ -219,7 +243,7 @@ function M.init(opts)
         ctx:promote_cwd()
         try(create_venv(opts.package))
 
-        if opts.upgrade_pip then
+        if opts.upgrade_pip and not use_uv then
             ctx.stdio_sink:stdout "Upgrading pip inside the virtual environment…\n"
             try(pip_install({ "pip" }, opts.install_extra_args))
         end
@@ -245,13 +269,17 @@ end
 ---@param pkg string
 function M.uninstall(pkg)
     log.fmt_debug("pypi: uninstall %s", pkg)
-    return venv_python {
-        "-m",
-        "pip",
-        "uninstall",
-        "-y",
-        pkg,
-    }
+    if use_uv then
+        return venv_python { "pip", "uninstall", "-y", pkg }
+    else
+        return venv_python {
+            "-m",
+            "pip",
+            "uninstall",
+            "-y",
+            pkg,
+        }
+    end
 end
 
 ---@param executable string
