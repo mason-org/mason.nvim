@@ -152,7 +152,12 @@ end
 local function deserialize(contents)
     local thread = parse_consumer()
     coroutine.resume(thread)
-    return coroutine.resume(thread, contents)
+    local ok, result = coroutine.resume(thread, contents)
+    if ok then
+        return result
+    else
+        error(result)
+    end
 end
 
 local function to_file(data)

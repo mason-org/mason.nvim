@@ -225,7 +225,7 @@ end
 ---@param filetype string
 function M.new_view_only_win(name, filetype)
     local namespace = vim.api.nvim_create_namespace(("installer_%s"):format(name))
-    local bufnr, backdrop_bufnr, renderer, mutate_state, get_state, unsubscribe, win_id, backdrop_win_id, window_mgmt_augroup, autoclose_augroup, registered_keymaps, registered_keybinds, registered_effect_handlers, sticky_cursor
+    local bufnr, backdrop_bufnr, renderer, mutate_state, get_state, unsubscribe, win_id, backdrop_win_id, window_augroup, registered_keymaps, registered_keybinds, registered_effect_handlers, sticky_cursor
     local has_initiated = false
     ---@type WindowOpts
     local window_opts = {}
@@ -458,11 +458,10 @@ function M.new_view_only_win(name, filetype)
 
         vim.cmd [[ syntax clear ]]
 
-        window_mgmt_augroup = vim.api.nvim_create_augroup("MasonWindowMgmt", {})
-        autoclose_augroup = vim.api.nvim_create_augroup("MasonWindow", {})
+        window_augroup = vim.api.nvim_create_augroup(name, {})
 
         vim.api.nvim_create_autocmd({ "VimResized" }, {
-            group = window_mgmt_augroup,
+            group = window_augroup,
             buffer = bufnr,
             callback = function()
                 if win_id and vim.api.nvim_win_is_valid(win_id) then
@@ -486,7 +485,7 @@ function M.new_view_only_win(name, filetype)
         })
 
         vim.api.nvim_create_autocmd({ "BufHidden", "BufUnload" }, {
-            group = autoclose_augroup,
+            group = window_augroup,
             buffer = bufnr,
             -- This is for instances where the window remains but the buffer is no longer visible, for example when
             -- loading another buffer into it (this is basically imitating 'winfixbuf', which was added in 0.10.0).
@@ -497,7 +496,7 @@ function M.new_view_only_win(name, filetype)
         -- essentially behaves as WinLeave except it keeps the Mason window(s) open under certain circumstances.
         local win_enter_aucmd
         win_enter_aucmd = vim.api.nvim_create_autocmd({ "WinEnter" }, {
-            group = autoclose_augroup,
+            group = window_augroup,
             pattern = "*",
             callback = function()
                 local buftype = vim.api.nvim_buf_get_option(0, "buftype")
@@ -582,8 +581,7 @@ function M.new_view_only_win(name, filetype)
             unsubscribe(true)
             log.fmt_trace("Closing window win_id=%s, bufnr=%s", win_id, bufnr)
             close_window()
-            vim.api.nvim_del_augroup_by_id(window_mgmt_augroup)
-            vim.api.nvim_del_augroup_by_id(autoclose_augroup)
+            vim.api.nvim_del_augroup_by_id(window_augroup)
         end),
         ---@param pos number[]: (row, col) tuple
         set_cursor = function(pos)

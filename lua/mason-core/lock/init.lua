@@ -54,12 +54,12 @@ end
 
 ---@param contents Lockfile
 function M.write_lockfile(contents)
-    local file = settings.current.lock.file
+    local file = settings.current.lockfile.path
     local parser = require "mason-core.lock.parser"
-    if settings.current.lock.backup and fs.sync.file_exists(file) then
+    if settings.current.lockfile.backup and fs.sync.file_exists(file) then
         backup_lockfile(file)
     end
-    local lockfile_dir = vim.fs.dirname(settings.current.lock.file)
+    local lockfile_dir = vim.fs.dirname(settings.current.lockfile.path)
     if not fs.sync.dir_exists(lockfile_dir) then
         fs.sync.mkdirp(lockfile_dir)
     end
@@ -104,19 +104,19 @@ function M.generate_lockfile()
 end
 
 function M.create_lockfile()
-    local file = settings.current.lock.file
+    local file = settings.current.lockfile.path
     local lockfile = M.generate_lockfile()
     M.write_lockfile(lockfile)
     return lockfile
 end
 
 function M.get_lockfile_path()
-    return settings.current.lock.file
+    return settings.current.lockfile.path
 end
 
 ---@return Lockfile?
 function M.get_lockfile()
-    local file = settings.current.lock.file
+    local file = settings.current.lockfile.path
     if fs.sync.file_exists(file) then
         return require("mason-core.lock.parser").deserialize_file(file)
     end
@@ -134,7 +134,7 @@ function M.init()
         ---@param pkg Package
         ---@param receipt InstallReceipt
         _.scheduler_wrap(function(pkg, receipt)
-            if receipt:get_install_options().no_lock == true or settings.current.lock.enabled == false then
+            if receipt:get_install_options().no_lock == true or settings.current.lockfile.enabled == false then
                 return
             end
             local lockfile = M.get_lockfile() or M.create_lockfile()
@@ -153,7 +153,7 @@ function M.init()
         ---@param pkg Package
         ---@param receipt InstallReceipt
         _.scheduler_wrap(function(pkg, receipt)
-            if receipt:get_install_options().no_lock == true or settings.current.lock.enabled == false then
+            if receipt:get_install_options().no_lock == true or settings.current.lockfile.enabled == false then
                 return
             end
             local lockfile = M.get_lockfile() or M.create_lockfile()

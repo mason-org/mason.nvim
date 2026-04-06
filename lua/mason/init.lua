@@ -27,7 +27,7 @@ function M.setup(config)
         Registry.sources:append(registry)
     end
 
-    if settings.current.lock.enabled then
+    if settings.current.lockfile.enabled then
         require("mason-core.lock").init()
     end
 
