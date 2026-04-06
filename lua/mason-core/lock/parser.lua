@@ -1,6 +1,5 @@
--- TODO fix this shit code
 local _ = require "mason-core.functional"
-local uv = vim.uv
+local fs = require "mason-core.fs"
 
 ---@param str string
 ---@param char string
@@ -14,153 +13,91 @@ local function split_once_left(str, char)
     return str
 end
 
-local function file_producer(consumer_thread, file)
-    local function resume(val)
-        local ok, value = coroutine.resume(consumer_thread, val)
-        if not ok then
-            error(value)
+---@param lockfile Lockfile
+local function validate(lockfile)
+    assert(lockfile.header and lockfile.header.version, "Header and version missing.")
+    assert(lockfile.header.version == "1", "Unknown lockfile version.")
+    for pkg_name, metadata in pairs(lockfile.body) do
+        assert(metadata.version, pkg_name .. " is missing version field.")
+        assert(metadata.registry, pkg_name .. " is missing registry field.")
+        local registry = metadata.registry
+        if registry.proto == "github" then
+            assert(registry.integrity, pkg_name .. " is missing registry.integrity field.")
+            assert(registry.name, pkg_name .. " is missing registry.name field.")
+            assert(registry.namespace, pkg_name .. " is missing registry.namespace field.")
+        elseif registry.proto == "file" then
+            assert(registry.path, pkg_name .. " is missing registry.path field.")
+        elseif registry.proto == "lua" then
+            assert(registry.mod, pkg_name .. " is missing registry.mod field.")
         else
-            return value
-        end
-    end
-
-    local fd = uv.fs_open(file, "r", tonumber("666", 8))
-
-    local size = 100
-    local offset = 0
-
-    resume()
-
-    while true do
-        local read = uv.fs_read(fd, size, offset)
-        offset = offset + size
-        if read == "" then
-            -- EOF
-            uv.fs_close(fd)
-            return resume(nil)
-        else
-            resume(read)
+            error "Unknown registry protocol."
         end
     end
 end
 
-local function buffered()
-    local split = _.split "\n"
-    local buffer = {}
-    local tail = nil
-    local exhausted = false
-    local i = 0
-    return function()
-        if #buffer == 0 and not exhausted then
-            local chunk = coroutine.yield()
-            if chunk then
-                local lines = split(chunk)
-                if tail then
-                    lines[1] = tail .. lines[1]
-                end
-                tail = table.remove(lines)
-                buffer = _.reverse(lines)
-            else
-                exhausted = true
-                if tail then
-                    buffer = { tail }
-                end
-                tail = nil
-            end
+---@param contents string
+local function parse(contents)
+    local header = nil
+    local body = {}
+    local cursor = { body }
+    local lines = _.split("\n", contents)
+
+    for line_no, line in ipairs(lines) do
+        local indentation = #line:match "^%s*"
+        local indent_level = indentation / 2
+        local current_indent_level = (#cursor - 1)
+        if math.fmod(indentation, 2) ~= 0 or indent_level > current_indent_level then
+            error(("Invalid indentation on line %s."):format(line_no))
         end
-        local line = table.remove(buffer)
-        if line then
-            i = i + 1
-            return i, line
-        else
-            return nil
-        end
-    end
-end
 
-local parse_consumer = function()
-    return coroutine.create(function()
-        local header = nil
-        local body = {}
-        local cursor = { body }
-
-        for line_no, line in buffered() do
-            local indentation = #line:match "^%s*"
-            local indent_level = indentation / 2
-            local current_indent_level = (#cursor - 1)
-            if math.fmod(indentation, 2) ~= 0 or indent_level > current_indent_level then
-                error(("Invalid indentation on line %s."):format(line_no))
-            end
-
-            if _.matches("^%s*$", line) then
+        if _.matches("^%s*$", line) then
             -- empty line
-            elseif _.matches("^%s*#", line) then
+        elseif _.matches("^%s*#", line) then
             -- comment
-            elseif _.matches("^---$", line) then
-                -- header
-                assert(header == nil, ("Duplicate headers in document on line %s."):format(line_no))
-                header = body
-                body = {}
-                cursor = { body }
+        elseif _.matches("^---$", line) then
+            -- header
+            assert(header == nil, ("Duplicate headers in document on line %s."):format(line_no))
+            header = body
+            body = {}
+            cursor = { body }
+        else
+            if indent_level < current_indent_level then
+                cursor = _.take(indent_level + 1, cursor)
+            end
+            local key, val = split_once_left(line:sub(indentation + 1), " ")
+            if val then
+                cursor[#cursor][key] = val
             else
-                if indent_level < current_indent_level then
-                    cursor = _.take(indent_level + 1, cursor)
-                end
-                local key, val = split_once_left(line:sub(indentation + 1), " ")
-                if val then
-                    cursor[#cursor][key] = val
-                else
-                    cursor[#cursor][key] = {}
-                    cursor[#cursor + 1] = cursor[#cursor][key]
-                end
+                cursor[#cursor][key] = {}
+                cursor[#cursor + 1] = cursor[#cursor][key]
             end
         end
-
-        ---@type Lockfile
-        local lockfile = {
-            header = header,
-            body = body,
-        }
-
-        assert(lockfile.header and lockfile.header.version, "Header and version missing.")
-        assert(lockfile.header.version == "1", "Unknown lockfile version.")
-        for pkg_name, metadata in pairs(lockfile.body) do
-            assert(metadata.version, "Missing version field.")
-            assert(metadata.registry, "Missing registry field.")
-            local registry = metadata.registry
-            if registry.proto == "github" then
-                assert(registry.integrity, "integrity field missing")
-                assert(registry.name, "name field missing")
-                assert(registry.namespace, "namespace field missing")
-            elseif registry.proto == "file" then
-                assert(registry.path, "path field missing")
-            elseif registry.proto == "lua" then
-                assert(registry.mod, "mod field missing")
-            else
-                error "Unknown registry protocol."
-            end
-        end
-
-        return lockfile
-    end)
-end
-
-local function deserialize_file(file)
-    return file_producer(parse_consumer(), file)
-end
-
-local function deserialize(contents)
-    local thread = parse_consumer()
-    coroutine.resume(thread)
-    local ok, result = coroutine.resume(thread, contents)
-    if ok then
-        return result
-    else
-        error(result)
     end
+
+    ---@type Lockfile
+    local lockfile = {
+        header = header,
+        body = body,
+    }
+
+    validate(lockfile)
+
+    return lockfile
 end
 
-local function to_file(data)
+---@param file string
+local function deserialize_file(file)
+    return parse(fs.sync.read_file(file))
+end
+
+---@param contents string
+local function deserialize(contents)
+    return parse(contents)
+end
+
+---@param lockfile Lockfile
+local function to_file(lockfile)
+    validate(lockfile)
     local output = {
         "# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.",
     }
@@ -178,15 +115,15 @@ local function to_file(data)
         end
     end, 3)
 
-    if data.header then
-        for _, key in ipairs(_.sort_by(_.identity, _.keys(data.header))) do
-            output[#output + 1] = serialize(0, key, data.header[key])
-        end
-        output[#output + 1] = { "", "---", "" }
+    -- Header
+    for _, key in ipairs(_.sort_by(_.identity, _.keys(lockfile.header))) do
+        output[#output + 1] = serialize(0, key, lockfile.header[key])
     end
+    output[#output + 1] = { "", "---", "" }
 
-    for _, key in ipairs(_.sort_by(_.identity, _.keys(data.body))) do
-        output[#output + 1] = serialize(0, key, data.body[key])
+    -- Body
+    for _, key in ipairs(_.sort_by(_.identity, _.keys(lockfile.body))) do
+        output[#output + 1] = serialize(0, key, lockfile.body[key])
         output[#output + 1] = { "" }
     end
 
@@ -196,5 +133,6 @@ end
 return {
     deserialize = deserialize,
     deserialize_file = deserialize_file,
+    validate = validate,
     serialize = to_file,
 }

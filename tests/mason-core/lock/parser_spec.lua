@@ -1,14 +1,288 @@
+local _ = require "mason-core.functional"
+local fs = require "mason-core.fs"
 local parser = require "mason-core.lock.parser"
 
-describe("lockfile parser", function()
+local function fixture_file(file)
+    return ("./tests/fixtures/lockfiles/%s"):format(file)
+end
 
-    it("should shit", function ()
-        vim.print(parser.deserialize("aöskjdasd aös \n         asdkjasd"))
-        vim.print(parser.deserialize("aöskjdasd aös \n         asdkjasd"))
-        vim.print(parser.deserialize("aöskjdasd aös \n         asdkjasd"))
-        vim.print(parser.deserialize("aöskjdasd aös \n         asdkjasd"))
-        vim.print(parser.deserialize("aöskjdasd aös \n         asdkjasd"))
-        vim.print(parser.deserialize("aöskjdasd aös \n         asdkjasd"))
+local function fixture(file)
+    return fs.sync.read_file(fixture_file(file))
+end
+
+describe("lockfile deserialize", function()
+    it("should parse valid lockfile", function()
+        for __, lockfile in ipairs {
+            parser.deserialize(fixture "valid.lock"),
+            parser.deserialize_file(fixture_file "valid.lock"),
+        } do
+            assert.same({
+                version = "1",
+            }, lockfile.header)
+
+            assert.equals(9, _.size(lockfile.body))
+
+            assert.same({
+                registry = {
+                    integrity = "2026-04-02-hasty-zipper~f95e94004b9e91e2fd2dd12f8c705dbcf9705be3b020c584061ab4464053cc89",
+                    name = "mason-registry",
+                    namespace = "mason-org",
+                    proto = "github",
+                },
+                version = "0.21.0",
+            }, lockfile.body["emmylua_ls"])
+        end
+    end)
+
+    local indent_matrix = {
+        {
+            err = "Invalid indentation on line 7.",
+            contents = _.dedent [=[
+                version 1
+
+                ---
+
+                actionlint
+                  registry
+                   proto github
+                  version v1.7.11
+            ]=],
+        },
+        {
+            err = "Invalid indentation on line 5.",
+            contents = _.dedent [=[
+                version 1
+
+                ---
+
+                  actionlint
+                  registry
+                    proto github
+                  version v1.7.11
+            ]=],
+        },
+        {
+            err = "Invalid indentation on line 8.",
+            contents = _.dedent [=[
+                version 1
+
+                ---
+
+                actionlint
+                  registry
+                    proto github
+                      version v1.7.11
+            ]=],
+        },
+    }
+
+    for no, matrix in ipairs(indent_matrix) do
+        it(("should catch invalid indentation: #%d"):format(no), function()
+            local err = assert.has_error(function()
+                parser.deserialize(matrix.contents)
+            end)
+
+            assert.equals(matrix.err, err)
+        end)
+    end
+
+    it("should require a header", function()
+        local contents = _.dedent [=[
+            actionlint
+              registry
+                integrity 2026-02-26-grey-sloth~c590b750ad05b73fe66ff0147b6e098b41203a3aab25266c377c6047c942e278
+                name mason-registry
+                namespace mason-org
+                proto github
+              version v1.7.11
+        ]=]
+
+        local err = assert.has_error(function()
+            parser.deserialize(contents)
+        end)
+
+        assert.equals("Header and version missing.", err)
+    end)
+
+    it("should support comments", function()
+        local contents = _.dedent [=[
+            version 1
+            ---
+            actionlint
+              registry
+                integrity 2026-02-26-grey-sloth~c590b750ad05b73fe66ff0147b6e098b41203a3aab25266c377c6047c942e278
+                name mason-registry
+                namespace mason-org
+                proto github
+              # I temporarily don't use version v1.7.11 because of reason.
+              # version v1.7.11
+              version v1.7.10
+        ]=]
+
+        local lockfile = parser.deserialize(contents)
+
+        assert.same({
+            registry = {
+                integrity = "2026-02-26-grey-sloth~c590b750ad05b73fe66ff0147b6e098b41203a3aab25266c377c6047c942e278",
+                name = "mason-registry",
+                namespace = "mason-org",
+                proto = "github",
+            },
+            version = "v1.7.10",
+        }, lockfile.body["actionlint"])
     end)
 end)
 
+describe("lockfile serialize", function()
+    it("should serialize valid lockfile table", function()
+        local lockfile = parser.serialize {
+            header = {
+                version = "1",
+            },
+            body = {
+                actionlint = {
+                    registry = {
+                        integrity = "2026-02-26-grey-sloth~c590b750ad05b73fe66ff0147b6e098b41203a3aab25266c377c6047c942e278",
+                        name = "mason-registry",
+                        namespace = "mason-org",
+                        proto = "github",
+                    },
+                    version = "v1.7.10",
+                },
+            },
+        }
+
+        assert.equals(_.dedent [=[
+                # THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.
+                version 1
+
+                ---
+
+                actionlint
+                  registry
+                    integrity 2026-02-26-grey-sloth~c590b750ad05b73fe66ff0147b6e098b41203a3aab25266c377c6047c942e278
+                    name mason-registry
+                    namespace mason-org
+                    proto github
+                  version v1.7.10
+            ]=] .. "\n", lockfile)
+    end)
+
+    it("should validate lockfile table", function()
+        local err = assert.has_error(function()
+            parser.serialize {
+                body = {
+                    actionlint = {
+                        registry = {
+                            integrity = "2026-02-26-grey-sloth~c590b750ad05b73fe66ff0147b6e098b41203a3aab25266c377c6047c942e278",
+                            name = "mason-registry",
+                            namespace = "mason-org",
+                            proto = "github",
+                        },
+                        version = "v1.7.10",
+                    },
+                },
+            }
+        end)
+
+        assert.equals("Header and version missing.", err)
+    end)
+end)
+
+describe("lockfile validation", function()
+    ---@type Lockfile
+    local lockfile
+
+    before_each(function()
+        lockfile = {
+            header = { version = "1" },
+            body = {
+                actionlint = {
+                    version = "v1.17.1",
+                    registry = {
+                        integrity = "2026-02-26-grey-sloth~c590b750ad05b73fe66ff0147b6e098b41203a3aab25266c377c6047c942e278",
+                        name = "mason-registry",
+                        namespace = "mason-org",
+                        proto = "github",
+                    },
+                },
+            },
+        }
+    end)
+
+    it("should validate header", function()
+        lockfile.header = nil
+        local err = assert.has_error(function()
+            parser.validate(lockfile)
+        end)
+        assert.equals("Header and version missing.", err)
+    end)
+
+    it("should validate lockfile version", function()
+        lockfile.header.version = "2"
+        local err = assert.has_error(function()
+            parser.validate(lockfile)
+        end)
+        assert.equals("Unknown lockfile version.", err)
+    end)
+
+    it("should validate missing version fields", function()
+        lockfile.body.actionlint.version = nil
+        local err = assert.has_error(function()
+            parser.validate(lockfile)
+        end)
+        assert.equals("actionlint is missing version field.", err)
+    end)
+
+    it("should validate missing registry fields", function()
+        lockfile.body.actionlint.registry = nil
+        local err = assert.has_error(function()
+            parser.validate(lockfile)
+        end)
+        assert.equals("actionlint is missing registry field.", err)
+    end)
+
+    it("(github) should validate missing integrity field", function()
+        lockfile.body.actionlint.registry.integrity = nil
+        local err = assert.has_error(function()
+            parser.validate(lockfile)
+        end)
+        assert.equals("actionlint is missing registry.integrity field.", err)
+    end)
+
+    it("(github) should validate missing name field", function()
+        lockfile.body.actionlint.registry.name = nil
+        local err = assert.has_error(function()
+            parser.validate(lockfile)
+        end)
+        assert.equals("actionlint is missing registry.name field.", err)
+    end)
+
+    it("(github) should validate missing name field", function()
+        lockfile.body.actionlint.registry.namespace = nil
+        local err = assert.has_error(function()
+            parser.validate(lockfile)
+        end)
+        assert.equals("actionlint is missing registry.namespace field.", err)
+    end)
+
+    it("(file) should validate missing path field", function()
+        lockfile.body.actionlint.registry = {
+            proto = "file",
+        }
+        local err = assert.has_error(function()
+            parser.validate(lockfile)
+        end)
+        assert.equals("actionlint is missing registry.path field.", err)
+    end)
+
+    it("(lua) should validate missing mod field", function()
+        lockfile.body.actionlint.registry = {
+            proto = "lua",
+        }
+        local err = assert.has_error(function()
+            parser.validate(lockfile)
+        end)
+        assert.equals("actionlint is missing registry.mod field.", err)
+    end)
+end)
