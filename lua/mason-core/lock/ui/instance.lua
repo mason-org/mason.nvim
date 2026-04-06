@@ -17,6 +17,7 @@ local window = display.new_view_only_win("mason.nvim lockfile restore", "mason")
 local INITIAL_STATE = {
     lockfile = {
         error = nil,
+        exists = false,
         is_loaded = false,
     },
     restore = {
@@ -292,8 +293,30 @@ window.view(
                         },
                         Ui.Keybind("R", "RESET", nil, true),
                     })
+                elseif not state.lockfile.exists then
+                    return Ui.CascadingStyleNode({ "INDENT" }, {
+                        Ui.HlTextNode {
+                            {
+                                p.Bold "Lockfile does not exist.",
+                            },
+                        },
+                        Ui.EmptyLine(),
+                        Ui.HlTextNode {
+                            {
+                                p.none "Press ",
+                                p.highlight "C",
+                                p.none " to create a new lockfile at ",
+                                p.highlight(settings.current.lockfile.path),
+                                p.none ".",
+                            },
+                        },
+                        Ui.EmptyLine(),
+                        Ui.HlTextNode { { p.muted "This will create a new lockfile based on your currently installed packages." } },
+                        Ui.Keybind("R", "RESET", nil, true),
+                    })
                 else
                     -- TODO loading state. Not needed for now because parsing lockfile is synchronous.
+                    return Ui.Node {}
                 end
             end),
         }
@@ -310,14 +333,15 @@ local function init()
         end)
         return
     end
-    if not lockfile then
+    if lockfile == nil then
         mutate_state(function(state)
-            state.lockfile.error = "Lockfile doesn't exist."
+            state.lockfile.exists = false
         end)
         return
     end
     mutate_state(function(state)
         state.lockfile.is_loaded = true
+        state.lockfile.exists = true
     end)
     local restore = LockfileRestore:new(lockfile)
 

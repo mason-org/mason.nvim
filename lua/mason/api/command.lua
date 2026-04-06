@@ -1,5 +1,6 @@
 local _ = require "mason-core.functional"
 local platform = require "mason-core.platform"
+local settings = require "mason.settings"
 
 local function Mason()
     require("mason.ui").open()
@@ -261,6 +262,16 @@ vim.api.nvim_create_user_command("MasonLog", MasonLog, {
     desc = "Opens the mason.nvim log.",
 })
 
+local function MasonLock()
+    require("mason-core.lock.ui").open()
+end
+
+if settings.current.lockfile.enabled then
+    vim.api.nvim_create_user_command("MasonLock", MasonLock, {
+        desc = "Opens the mason.nvim lockfile restore window.",
+    })
+end
+
 return {
     Mason = Mason,
     MasonInstall = MasonInstall,
@@ -268,4 +279,5 @@ return {
     MasonUninstallAll = MasonUninstallAll,
     MasonUpdate = MasonUpdate,
     MasonLog = MasonLog,
+    MasonLock = MasonLock,
 }
