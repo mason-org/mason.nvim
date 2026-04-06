@@ -41,10 +41,12 @@ local function backup_lockfile(file)
     if not fs.sync.dir_exists(LOCKFILE_BACKUP_DIR) then
         fs.sync.mkdirp(LOCKFILE_BACKUP_DIR)
     end
-    local base_backup_file = path.concat { LOCKFILE_BACKUP_DIR, ("mason-%s.lock"):format(os.date "%Y%m%d-%H%M%S") }
+    local seconds, microseconds = vim.uv.gettimeofday()
+    local milliseconds = seconds * 1000 + math.floor(microseconds / 1000)
+    local base_backup_file = path.concat { LOCKFILE_BACKUP_DIR, ("mason-%s.lock"):format(milliseconds) }
     local backup_file = base_backup_file
     local i = 1
-    while i < 10 and fs.sync.file_exists(backup_file) do
+    while i < 5 and fs.sync.file_exists(backup_file) do
         backup_file = base_backup_file .. "." .. i
         i = i + 1
     end
