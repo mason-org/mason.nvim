@@ -310,6 +310,12 @@ local function init()
         end)
         return
     end
+    if not lockfile then
+        mutate_state(function(state)
+            state.lockfile.error = "Lockfile doesn't exist."
+        end)
+        return
+    end
     mutate_state(function(state)
         state.lockfile.is_loaded = true
     end)

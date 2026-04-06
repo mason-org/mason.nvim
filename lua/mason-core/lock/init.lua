@@ -118,7 +118,7 @@ end
 function M.get_lockfile()
     local file = settings.current.lock.file
     if fs.sync.file_exists(file) then
-        return require("mason-core.lock.parser").deserialize(file)
+        return require("mason-core.lock.parser").deserialize_file(file)
     end
 end
 
