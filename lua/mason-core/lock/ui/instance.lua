@@ -310,9 +310,11 @@ window.view(
                                 p.none ".",
                             },
                         },
+                        Ui.Keybind("C", "CREATE_LOCKFILE", nil, true),
                         Ui.EmptyLine(),
-                        Ui.HlTextNode { { p.muted "This will create a new lockfile based on your currently installed packages." } },
-                        Ui.Keybind("R", "RESET", nil, true),
+                        Ui.HlTextNode {
+                            { p.muted "This will create a new lockfile based on your currently installed packages." },
+                        },
                     })
                 else
                     -- TODO loading state. Not needed for now because parsing lockfile is synchronous.
@@ -453,10 +455,16 @@ local function toggle_install_log(event)
     end)
 end
 
+local function create_lockfile()
+    lock.create_lockfile()
+    init()
+end
+
 window.init {
     effects = {
         CLOSE_WINDOW = window.close,
         RESET = init,
+        CREATE_LOCKFILE = create_lockfile,
         CONFIRM_RESTORE = restore,
         TOGGLE_INSTALL_LOG = toggle_install_log,
     },

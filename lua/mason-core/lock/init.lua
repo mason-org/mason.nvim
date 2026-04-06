@@ -150,7 +150,13 @@ function M.init()
             if settings.current.lockfile.enabled == false then
                 return log.debug "Package was installed but not updating lockfile because lockfile is disabled via settings."
             end
-            local lockfile = M.get_lockfile() or M.create_lockfile()
+            local lockfile = M.get_lockfile()
+            if not lockfile then
+                return log.fmt_warn(
+                    "Lockfile is enabled but a lockfile could not be found at %s. Create a lockfile first through :MasonLock.",
+                    settings.current.lockfile.path
+                )
+            end
             local ok, entry = pcall(generate_lockfile_entry, pkg)
             if ok then
                 lockfile.body[pkg.name] = entry
@@ -172,7 +178,13 @@ function M.init()
             if settings.current.lockfile.enabled == false then
                 return log.debug "Package was uninstalled but not updating lockfile because lockfile is disabled via settings."
             end
-            local lockfile = M.get_lockfile() or M.create_lockfile()
+            local lockfile = M.get_lockfile()
+            if not lockfile then
+                return log.fmt_warn(
+                    "Lockfile is enabled but a lockfile could not be found at %s. Create a lockfile first through :MasonLock.",
+                    settings.current.lockfile.path
+                )
+            end
             lockfile.body[pkg.name] = nil
             M.write_lockfile(lockfile)
         end)
