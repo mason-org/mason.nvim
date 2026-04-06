@@ -145,6 +145,38 @@ describe("Package ::", function()
         end)
     end)
 
+    it("should successfully uninstall package", function()
+        local dummy = registry.get_package "dummy"
+        local package_uninstall_success_handler = spy.new()
+        local package_uninstall_failed_handler = spy.new()
+        local uninstall_success_handler = spy.new()
+        local uninstall_failed_handler = spy.new()
+        registry:once("package:uninstall:success", package_uninstall_success_handler)
+        registry:once("package:uninstall:failed", package_uninstall_failed_handler)
+        dummy:once("uninstall:success", uninstall_success_handler)
+        dummy:once("uninstall:failed", uninstall_failed_handler)
+
+        local handle = dummy:install { version = "1337" }
+
+        assert.wait(function()
+            assert.is_true(handle:is_closed())
+            assert.is_true(dummy:is_installed())
+        end)
+
+        dummy:uninstall()
+
+        assert.wait(function()
+            assert.spy(uninstall_success_handler).was_called(1)
+            assert.spy(uninstall_success_handler).was_called_with(match.instanceof(receipt.InstallReceipt))
+            assert.spy(package_uninstall_success_handler).was_called(1)
+            assert
+                .spy(package_uninstall_success_handler)
+                .was_called_with(match.is_ref(dummy), match.instanceof(receipt.InstallReceipt))
+            assert.spy(package_uninstall_failed_handler).was_called(0)
+            assert.spy(uninstall_failed_handler).was_called(0)
+        end)
+    end)
+
     it("should fail to install package", function()
         local dummy = registry.get_package "dummy"
         stub(dummy.spec.source, "install", function()
