@@ -49,6 +49,13 @@ local function backup_lockfile(file)
         i = i + 1
     end
     fs.sync.copy_file(file, backup_file)
+    if vim.fn.executable "gzip" == 1 then
+        vim.system({ "gzip", backup_file }, { text = true }, function(obj)
+            if obj.code ~= 0 or obj.signal ~= 0 then
+                log.warn("Failed to gzip backup file.", obj.stdout, obj.stderr)
+            end
+        end)
+    end
     return backup_file
 end
 
@@ -56,7 +63,7 @@ end
 function M.write_lockfile(contents)
     local file = settings.current.lockfile.path
     local parser = require "mason-core.lock.parser"
-    if settings.current.lockfile.backup and fs.sync.file_exists(file) then
+    if settings.current.lockfile.backup.enabled and fs.sync.file_exists(file) then
         backup_lockfile(file)
     end
     local lockfile_dir = vim.fs.dirname(settings.current.lockfile.path)
@@ -105,6 +112,7 @@ end
 
 function M.create_lockfile()
     local file = settings.current.lockfile.path
+    log.fmt_debug("Creating lockfile at %s.", file)
     local lockfile = M.generate_lockfile()
     M.write_lockfile(lockfile)
     return lockfile
@@ -134,8 +142,11 @@ function M.init()
         ---@param pkg Package
         ---@param receipt InstallReceipt
         _.scheduler_wrap(function(pkg, receipt)
-            if receipt:get_install_options().no_lock == true or settings.current.lockfile.enabled == false then
-                return
+            if receipt:get_install_options().no_lock == true then
+                return log.debug "Package was installed but not updating lockfile because no_lock was enabled."
+            end
+            if settings.current.lockfile.enabled == false then
+                return log.debug "Package was installed but not updating lockfile because lockfile is disabled via settings."
             end
             local lockfile = M.get_lockfile() or M.create_lockfile()
             local ok, entry = pcall(generate_lockfile_entry, pkg)
@@ -153,8 +164,11 @@ function M.init()
         ---@param pkg Package
         ---@param receipt InstallReceipt
         _.scheduler_wrap(function(pkg, receipt)
-            if receipt:get_install_options().no_lock == true or settings.current.lockfile.enabled == false then
-                return
+            if receipt:get_install_options().no_lock == true then
+                return log.debug "Package was uninstalled but not updating lockfile because no_lock was enabled."
+            end
+            if settings.current.lockfile.enabled == false then
+                return log.debug "Package was uninstalled but not updating lockfile because lockfile is disabled via settings."
             end
             local lockfile = M.get_lockfile() or M.create_lockfile()
             lockfile.body[pkg.name] = nil

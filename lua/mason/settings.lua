@@ -28,8 +28,13 @@ local DEFAULT_SETTINGS = {
         ---@since 2.2.0
         enabled = false,
 
-        ---@since 2.2.0
-        backup = false,
+        backup = {
+            ---@since 2.2.0
+            enabled = false,
+
+            ---@since 2.2.0
+            path = vim.fs.joinpath(vim.fn.stdpath "cache", "mason", "lockfiles"),
+        },
 
         ---@since 2.2.0
         path = vim.fs.joinpath(vim.fn.stdpath "config", "mason.lock"),

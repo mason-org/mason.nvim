@@ -13,8 +13,8 @@ end
 describe("lockfile deserialize", function()
     it("should parse valid lockfile", function()
         for __, lockfile in ipairs {
-            parser.deserialize(fixture "valid.lock"),
-            parser.deserialize_file(fixture_file "valid.lock"),
+            parser.deserialize(fixture "valid-v1.lock"),
+            parser.deserialize_file(fixture_file "valid-v1.lock"),
         } do
             assert.same({
                 version = "1",
