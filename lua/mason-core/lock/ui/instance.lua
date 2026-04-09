@@ -49,7 +49,7 @@ local mutate_state, get_state = window.state(INITIAL_STATE)
 local function Header(state)
     return Ui.CascadingStyleNode({ "CENTERED" }, {
         Ui.HlTextNode {
-            { p.header " mason.nvim | Lockfile restore " },
+            { p.header " mason.nvim | Lockfile " },
         },
         Ui.EmptyLine(),
         Ui.EmptyLine(),
@@ -231,15 +231,73 @@ window.view(
                     })
                 elseif state.preview then
                     return Ui.CascadingStyleNode({ "INDENT" }, {
-                        Ui.HlTextNode {
-                            { p.Bold "Lockfile" },
-                            {
-                                p.none "Press ",
-                                p.highlight(settings.current.ui.keymaps.update_all_packages),
-                                p.none " to restore the following packages.",
-                            },
-                        },
-                        Ui.Keybind(settings.current.ui.keymaps.update_all_packages, "CONFIRM_RESTORE", nil, true),
+                        Ui.When(#state.preview == 0, function()
+                            return Ui.Node {
+                                Ui.HlTextNode {
+                                    {
+                                        p.Bold "Lockfile is empty",
+                                    },
+                                },
+                                Ui.EmptyLine(),
+                                Ui.HlTextNode {
+                                    {
+                                        p.none "Press ",
+                                        p.highlight "C",
+                                        p.none " to include all of your currently installed packages in the lockfile.",
+                                    },
+                                },
+                                Ui.Keybind("C", "CREATE_LOCKFILE", nil, true),
+                            }
+                        end),
+                        Ui.When(#state.preview > 0, function()
+                            return Ui.Node {
+                                Ui.HlTextNode {
+                                    { p.Bold "Lockfile" },
+                                    {
+                                        p.none "Press ",
+                                        p.highlight(settings.current.ui.keymaps.update_all_packages),
+                                        p.none " to restore the following packages.",
+                                    },
+                                },
+                                Ui.Keybind(
+                                    settings.current.ui.keymaps.update_all_packages,
+                                    "CONFIRM_RESTORE",
+                                    nil,
+                                    true
+                                ),
+                                Ui.EmptyLine(),
+                                Ui.HlTextNode(p.muted "Package"),
+                                Ui.Node(vim.tbl_map(function(preview)
+                                    local is_same_version = preview.from_version == preview.to_version
+                                    return Ui.Node {
+                                        Ui.HlTextNode {
+                                            {
+                                                preview.is_installed and p.none(preview.package .. " ")
+                                                    or p.Bold(preview.package .. " "),
+                                                (preview.is_installed and not is_same_version)
+                                                        and p.muted(truncate(preview.from_version .. " -> ", 16))
+                                                    or p.none "",
+                                                is_same_version and p.muted(truncate(preview.to_version, 16))
+                                                    or p.highlight(truncate(preview.to_version, 16)),
+                                            },
+                                        },
+                                        Ui.Keybind("X", "REMOVE_PACKAGE", preview.package),
+                                    }
+                                end, state.preview)),
+                                Ui.EmptyLine(),
+                                Ui.When(
+                                    #state.preview > 0,
+                                    Ui.HlTextNode {
+                                        {
+                                            p.none "Press ",
+                                            p.highlight "X",
+                                            p.none " to remove a package from the lockfile.",
+                                        },
+                                    }
+                                ),
+                            }
+                        end),
+                        Ui.EmptyLine(),
                         Ui.HlTextNode {
                             {
                                 p.none "Press ",
@@ -248,23 +306,6 @@ window.view(
                             },
                         },
                         Ui.Keybind("R", "RESET", nil, true),
-                        Ui.EmptyLine(),
-                        Ui.Table {
-                            {
-                                p.muted "Package",
-                                p.muted "current",
-                                p.muted "target",
-                            },
-                            unpack(vim.tbl_map(function(preview)
-                                local is_same_version = preview.from_version == preview.to_version
-                                return {
-                                    preview.is_installed and p.none(preview.package) or p.Bold(preview.package),
-                                    p.muted(preview.from_version and truncate(preview.from_version, 16) or "-"),
-                                    is_same_version and p.muted(truncate(preview.to_version, 16))
-                                        or p.highlight(truncate(preview.to_version, 16)),
-                                }
-                            end, state.preview)),
-                        },
                     })
                 else
                     return Ui.CascadingStyleNode({ "INDENT" }, {
@@ -297,7 +338,7 @@ window.view(
                     return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.HlTextNode {
                             {
-                                p.Bold "Lockfile does not exist.",
+                                p.Bold "Lockfile does not exist",
                             },
                         },
                         Ui.EmptyLine(),
@@ -460,6 +501,17 @@ local function create_lockfile()
     init()
 end
 
+local function remove_package(event)
+    local pkg_name = event.payload
+    local lockfile = lock.get_lockfile()
+    if not lockfile then
+        return
+    end
+    lockfile.body[pkg_name] = nil
+    lock.write_lockfile(lockfile)
+    init()
+end
+
 window.init {
     effects = {
         CLOSE_WINDOW = window.close,
@@ -467,6 +519,7 @@ window.init {
         CREATE_LOCKFILE = create_lockfile,
         CONFIRM_RESTORE = restore,
         TOGGLE_INSTALL_LOG = toggle_install_log,
+        REMOVE_PACKAGE = remove_package,
     },
     winhighlight = {
         "NormalFloat:MasonNormal",

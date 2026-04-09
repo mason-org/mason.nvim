@@ -10,7 +10,7 @@ local settings = require "mason.settings"
 local Semaphore = require("mason-core.async.control").Semaphore
 
 ---@alias PackageInstallOpts { version?: string, debug?: boolean, target?: string, force?: boolean, strict?: boolean, location?: InstallLocation, no_lock?: boolean }
----@alias PackageUninstallOpts { bypass_permit?: boolean, location?: InstallLocation }
+---@alias PackageUninstallOpts { bypass_permit?: boolean, location?: InstallLocation, no_lock?: boolean }
 
 ---@class AbstractPackage : EventEmitter
 ---@field name string

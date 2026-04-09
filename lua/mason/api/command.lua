@@ -187,25 +187,35 @@ end, {
 })
 
 ---@param package_names string[]
-local function MasonUninstall(package_names)
+---@param opts table<string, string | boolean>
+local function MasonUninstall(package_names, opts)
     local valid_packages = get_valid_packages(package_names)
     if #valid_packages > 0 then
         _.each(function(target)
-            target.pkg:uninstall()
+            target.pkg:uninstall {
+                no_lock = opts["no-lock"],
+            }
         end, valid_packages)
         require("mason.ui").open()
     end
 end
 
 vim.api.nvim_create_user_command("MasonUninstall", function(opts)
-    MasonUninstall(opts.fargs)
+    local command_opts, packages = parse_args(opts.fargs)
+    MasonUninstall(packages, command_opts)
 end, {
     desc = "Uninstall one or more packages.",
     nargs = "+",
     ---@param arg_lead string
     complete = function(arg_lead)
         local registry = require "mason-registry"
-        return _.sort_by(_.identity, _.filter(_.starts_with(arg_lead), registry.get_installed_package_names()))
+        if _.starts_with("--", arg_lead) then
+            return _.filter(_.starts_with(arg_lead), {
+                "--no-lock",
+            })
+        else
+            return _.sort_by(_.identity, _.filter(_.starts_with(arg_lead), registry.get_installed_package_names()))
+        end
     end,
 })
 

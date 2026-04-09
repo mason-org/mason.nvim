@@ -63,6 +63,7 @@ end
 
 ---@param contents Lockfile
 function M.write_lockfile(contents)
+    log.debug(debug.traceback "Writing lockfile")
     local file = settings.current.lockfile.path
     local parser = require "mason-core.lock.parser"
     if settings.current.lockfile.backup.enabled and fs.sync.file_exists(file) then
@@ -143,7 +144,7 @@ function M.init()
         "package:install:success",
         ---@param pkg Package
         ---@param receipt InstallReceipt
-        _.scheduler_wrap(function(pkg, receipt)
+        function(pkg, receipt)
             if receipt:get_install_options().no_lock == true then
                 return log.debug "Package was installed but not updating lockfile because no_lock was enabled."
             end
@@ -164,16 +165,17 @@ function M.init()
             else
                 log.error("Failed to generate lockfile entry for", pkg, entry)
             end
-        end)
+        end
     )
 
     registry:on(
         "package:uninstall:success",
         ---@param pkg Package
         ---@param receipt InstallReceipt
-        _.scheduler_wrap(function(pkg, receipt)
-            if receipt:get_install_options().no_lock == true then
-                return log.debug "Package was uninstalled but not updating lockfile because no_lock was enabled."
+        ---@param opts PackageUninstallOpts
+        function(pkg, receipt, opts)
+            if opts.no_lock then
+                return
             end
             if settings.current.lockfile.enabled == false then
                 return log.debug "Package was uninstalled but not updating lockfile because lockfile is disabled via settings."
@@ -187,7 +189,7 @@ function M.init()
             end
             lockfile.body[pkg.name] = nil
             M.write_lockfile(lockfile)
-        end)
+        end
     )
 end
 

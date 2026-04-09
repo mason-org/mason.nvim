@@ -62,8 +62,8 @@ function UninstallRunner:execute(opts, callback)
             if callback then
                 callback(true, receipt)
             end
-            pkg:emit("uninstall:success", receipt)
-            registry:emit("package:uninstall:success", pkg, receipt)
+            pkg:emit("uninstall:success", receipt, opts)
+            registry:emit("package:uninstall:success", pkg, receipt, opts)
         else
             log.fmt_error("Uninstallation failed for %s error=%s", pkg, result)
             if callback then

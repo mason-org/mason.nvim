@@ -73,13 +73,16 @@ function InstallContext:promote_cwd()
     -- 1. Uninstall any existing installation
     if self.handle.package:is_installed() then
         a.wait(function(resolve, reject)
-            self.handle.package:uninstall({ bypass_permit = true }, function(success, result)
-                if not success then
-                    reject(result)
-                else
-                    resolve()
+            self.handle.package:uninstall(
+                { bypass_permit = true, no_lock = self.opts.no_lock, location = self.location },
+                function(success, result)
+                    if not success then
+                        reject(result)
+                    else
+                        resolve()
+                    end
                 end
-            end)
+            )
         end)
     end
 
