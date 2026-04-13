@@ -1,10 +1,14 @@
 return {
     close = function()
-        local api = require "mason-core.lock.ui.instance"
-        api.close()
+        local instance = require "mason-core.lock.ui.instance"
+        instance.close()
     end,
     open = function()
-        local api = require "mason-core.lock.ui.instance"
-        api.open()
+        local instance = require "mason-core.lock.ui.instance"
+        instance.open()
     end,
+    restore = function ()
+        local instance = require "mason-core.lock.ui.instance"
+        instance.restore()
+    end
 }

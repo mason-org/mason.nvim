@@ -63,7 +63,7 @@ end
 
 ---@param contents Lockfile
 function M.write_lockfile(contents)
-    log.debug(debug.traceback "Writing lockfile")
+    log.debug "Writing lockfile"
     local file = settings.current.lockfile.path
     local parser = require "mason-core.lock.parser"
     if settings.current.lockfile.backup.enabled and fs.sync.file_exists(file) then
@@ -110,6 +110,8 @@ function M.generate_lockfile()
         end
     end
 
+    log.fmt_debug("Generating lockfile with %d packages.", _.size(lockfile.body))
+
     return lockfile
 end
 
@@ -131,6 +133,10 @@ function M.get_lockfile()
     if fs.sync.file_exists(file) then
         return require("mason-core.lock.parser").deserialize_file(file)
     end
+end
+
+function M.has_lockfile()
+    return fs.sync.file_exists(settings.current.lockfile.path)
 end
 
 local has_init = false

@@ -272,15 +272,38 @@ vim.api.nvim_create_user_command("MasonLog", MasonLog, {
     desc = "Opens the mason.nvim log.",
 })
 
-local function MasonLock()
-    require("mason-core.lock.ui").open()
+local function MasonLock(subcommand)
+    local lock = require "mason-core.lock"
+    local notify = require "mason-core.notify"
+
+    if subcommand == "generate" then
+        if lock.has_lockfile() then
+            local answer =
+                vim.fn.confirm("Lockfile already exists, are you sure you want to generate a new one?", "&Yes\n&No", 2)
+            if answer ~= 1 then
+                return
+            end
+        end
+        lock.write_lockfile(lock.generate_lockfile())
+        notify("Successfully generated lockfile at " .. settings.current.lockfile.path)
+    elseif subcommand == "restore" then
+        require("mason-core.lock.ui").restore()
+        require("mason-core.lock.ui").open()
+    else
+        require("mason-core.lock.ui").open()
+    end
 end
 
-if settings.current.lockfile.enabled then
-    vim.api.nvim_create_user_command("MasonLock", MasonLock, {
-        desc = "Opens the mason.nvim lockfile restore window.",
-    })
-end
+vim.api.nvim_create_user_command("MasonLock", function(opts)
+    local command_opts, args = parse_args(opts.fargs)
+    MasonLock(args[1])
+end, {
+    desc = "Opens the mason.nvim lockfile restore window.",
+    nargs = "*",
+    complete = function()
+        return { "generate", "restore" }
+    end,
+})
 
 return {
     Mason = Mason,

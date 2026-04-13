@@ -318,7 +318,7 @@ window.view(
                     return Ui.CascadingStyleNode({ "INDENT" }, {
                         Ui.HlTextNode {
                             {
-                                p.Bold "Unable to restore from lockfile",
+                                p.Bold "Unable to parse lockfile",
                             },
                             {
                                 p.error(state.lockfile.error),
@@ -366,7 +366,8 @@ window.view(
     end
 )
 
-local function init()
+---@param cb? fun()
+local function init(cb)
     mutate_state, get_state = window.reset_state(INITIAL_STATE)
 
     local ok, lockfile = pcall(lock.get_lockfile)
@@ -411,6 +412,9 @@ local function init()
                 return a.package < b.package
             end)
         end)
+        if cb then
+            cb()
+        end
     end)
 end
 
@@ -515,7 +519,9 @@ end
 window.init {
     effects = {
         CLOSE_WINDOW = window.close,
-        RESET = init,
+        RESET = function()
+            init()
+        end,
         CREATE_LOCKFILE = create_lockfile,
         CONFIRM_RESTORE = restore,
         TOGGLE_INSTALL_LOG = toggle_install_log,
@@ -530,6 +536,9 @@ local has_initialized = false
 return {
     init = init,
     close = window.close,
+    restore = function()
+        init(restore)
+    end,
     open = function()
         if not has_initialized then
             init()
