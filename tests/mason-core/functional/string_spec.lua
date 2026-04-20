@@ -71,6 +71,7 @@ Ipsum
         assert.equals("long_pattern", _.strip_prefix("long_pattern_here", "long_pattern"))
         assert.equals("", _.strip_prefix("pattern_here", "pattern_here"))
         assert.equals("s", _.strip_prefix("pattern_here", "pattern_heres"))
+        assert.equals(nil, _.strip_prefix("any", nil))
     end)
 
     it("should strip_suffix", function()
@@ -81,5 +82,6 @@ Ipsum
         assert.equals("pattern_here", _.strip_suffix("long_pattern_here", "pattern_here"))
         assert.equals("", _.strip_suffix("pattern_here", "pattern_here"))
         assert.equals("s", _.strip_suffix("pattern_here", "spattern_here"))
+        assert.equals(nil, _.strip_suffix("any", nil))
     end)
 end)

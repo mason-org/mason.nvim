@@ -108,6 +108,9 @@ _.trim_end_matches = fun.curryN(function(pattern, str)
 end, 2)
 
 _.strip_prefix = fun.curryN(function(prefix_pattern, str)
+    if str == nil then
+        return str
+    end
     if #prefix_pattern > #str then
         return str
     end
@@ -120,6 +123,9 @@ _.strip_prefix = fun.curryN(function(prefix_pattern, str)
 end, 2)
 
 _.strip_suffix = fun.curryN(function(suffix_pattern, str)
+    if str == nil then
+        return str
+    end
     if #suffix_pattern > #str then
         return str
     end
