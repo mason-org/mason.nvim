@@ -284,6 +284,15 @@ Example:
             install_args = {},
         },
 
+        npm = {
+            ---@since 2.3.0
+            -- These args will be added to `npm install` calls. Note that setting extra args might impact intended behavior
+            -- and is not recommended.
+            --
+            -- Example: { "--registry", "https://registry.npmjs.org/" }
+            install_args = {},
+        },
+
         ui = {
             ---@since 1.0.0
             -- Whether to automatically check for new versions when opening the :Mason window.
