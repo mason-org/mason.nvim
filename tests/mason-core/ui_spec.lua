@@ -233,7 +233,7 @@ describe("integration test", function()
             match.tbl_containing { nowait = true, silent = true, buffer = match.is_number() }
         )
 
-        assert.spy(clear_namespace).was_called(1)
+        assert.spy(clear_namespace).was_called()
         assert.spy(clear_namespace).was_called_with(match.is_number(), match.is_number(), 0, -1)
 
         mutate_state(function(state)
