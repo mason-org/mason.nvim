@@ -69,7 +69,7 @@ local DEFAULT_SETTINGS = {
     },
 
     npm = {
-        ---@since 1.0.0
+        ---@since 2.3.0
         -- These args will be added to `npm install` calls. Note that setting extra args might impact intended behavior
         -- and is not recommended.
         --
