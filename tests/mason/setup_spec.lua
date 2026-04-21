@@ -47,6 +47,8 @@ describe("mason setup", function()
         mason.setup()
         local user_commands = vim.api.nvim_get_commands {}
 
+        local lua_func = vim.fn.has "nvim-0.12" == 1 and match.is_function() or "<Lua function>"
+
         assert.is_true(match.tbl_containing {
             bang = false,
             bar = false,
@@ -59,7 +61,7 @@ describe("mason setup", function()
             bar = false,
             definition = "Install one or more packages.",
             nargs = "+",
-            complete = "<Lua function>",
+            complete = lua_func,
         }(user_commands["MasonInstall"]))
 
         assert.is_true(match.tbl_containing {
@@ -67,7 +69,7 @@ describe("mason setup", function()
             bar = false,
             definition = "Uninstall one or more packages.",
             nargs = "+",
-            complete = "<Lua function>",
+            complete = lua_func,
         }(user_commands["MasonUninstall"]))
 
         assert.is_true(match.tbl_containing {

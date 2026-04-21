@@ -57,7 +57,7 @@ end
 ---@async
 ---@param pkg string
 ---@param version string
----@param opts? { extra_packages?: string[] }
+---@param opts? { extra_packages?: string[], install_extra_args?: string[] }
 function M.install(pkg, version, opts)
     opts = opts or {}
     log.fmt_debug("npm: install %s %s %s", pkg, version, opts)
@@ -67,6 +67,7 @@ function M.install(pkg, version, opts)
         "install",
         ("%s@%s"):format(pkg, version),
         opts.extra_packages or vim.NIL,
+        opts.install_extra_args or vim.NIL,
     }
 end
 
