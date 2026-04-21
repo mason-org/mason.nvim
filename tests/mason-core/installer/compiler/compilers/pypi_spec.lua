@@ -39,7 +39,6 @@ describe("pypi compiler :: parsing", function()
             },
             pypi.parse({ extra_packages = { "extra" } }, purl())
         )
-        settings.set(settings._DEFAULT_SETTINGS)
     end)
 end)
 

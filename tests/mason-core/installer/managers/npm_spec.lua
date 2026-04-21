@@ -95,7 +95,7 @@ describe("npm manager", function()
     it("should install with extra args", function()
         local ctx = test_helpers.create_context()
 
-        ctx:execute(function ()
+        ctx:execute(function()
             npm.install("my-package", "1.0.0", {
                 install_extra_args = { "--registry", "https://registry.npmjs.org/" },
             })

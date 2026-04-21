@@ -1,7 +1,7 @@
 local Purl = require "mason-core.purl"
 local Result = require "mason-core.result"
-local settings = require "mason.settings"
 local npm = require "mason-core.installer.compiler.compilers.npm"
+local settings = require "mason.settings"
 local stub = require "luassert.stub"
 local test_helpers = require "mason-test.helpers"
 
