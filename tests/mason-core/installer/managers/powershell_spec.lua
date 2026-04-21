@@ -69,7 +69,7 @@ describe("powershell manager", function()
             "-NoProfile",
             "-NonInteractive",
             "-Command",
-            [[ $ErrorActionPreference = "Stop";  $ProgressPreference = 'SilentlyContinue';  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; echo 'Is this bash?']],
+            [[ $ErrorActionPreference = 'Stop';  $ProgressPreference = 'SilentlyContinue';  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; echo 'Is this bash?']],
         })
     end)
 
