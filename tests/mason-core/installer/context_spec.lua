@@ -1,13 +1,24 @@
+local a = require "mason-core.async"
 local match = require "luassert.match"
 local path = require "mason-core.path"
-local pip3 = require "mason-core.managers.pip3"
+local pypi = require "mason-core.installer.managers.pypi"
 local registry = require "mason-registry"
-local std = require "mason-core.managers.std"
+local spy = require "luassert.spy"
 local stub = require "luassert.stub"
+local test_helpers = require "mason-test.helpers"
 
 describe("installer", function()
     ---@module "mason-core.platform"
     local platform
+    local snapshot
+
+    before_each(function()
+        snapshot = assert.snapshot()
+    end)
+
+    after_each(function()
+        snapshot:revert()
+    end)
 
     before_each(function()
         package.loaded["mason-core.installer.platform"] = nil
@@ -16,14 +27,13 @@ describe("installer", function()
     end)
 
     it("should write shell exec wrapper on Unix", function()
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx.fs, "write_file")
         stub(ctx.fs, "file_exists")
         stub(ctx.fs, "dir_exists")
+        stub(ctx.fs, "chmod_exec")
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), "my-executable").returns(false)
         ctx.fs.dir_exists.on_call_with(match.is_ref(ctx.fs), "my-executable").returns(false)
-        stub(std, "chmod")
 
         ctx:write_shell_exec_wrapper("my-executable", "bash -c 'echo $GREETING'", {
             GREETING = "Hello World!",
@@ -45,14 +55,12 @@ exec bash -c 'echo $GREETING' "$@"]]
         platform.is.unix = false
         platform.is.linux = false
         platform.is.win = true
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx.fs, "write_file")
         stub(ctx.fs, "file_exists")
         stub(ctx.fs, "dir_exists")
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), "my-executable").returns(false)
         ctx.fs.dir_exists.on_call_with(match.is_ref(ctx.fs), "my-executable").returns(false)
-        stub(std, "chmod")
 
         ctx:write_shell_exec_wrapper("my-executable", "cmd.exe /C echo %GREETING%", {
             GREETING = "Hello World!",
@@ -70,8 +78,7 @@ cmd.exe /C echo %GREETING% %*]]
 
     it("should not write shell exec wrapper if new executable path already exists", function()
         local exec_rel_path = path.concat { "obscure", "path", "to", "server" }
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx.fs, "file_exists")
         stub(ctx.fs, "dir_exists")
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), exec_rel_path).returns(true)
@@ -87,9 +94,7 @@ cmd.exe /C echo %GREETING% %*]]
 
     it("should write Node exec wrapper", function()
         local js_rel_path = path.concat { "some", "obscure", "path", "server.js" }
-        local dummy = registry.get_package "dummy"
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx, "write_shell_exec_wrapper")
         stub(ctx.fs, "file_exists")
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), js_rel_path).returns(true)
@@ -100,15 +105,13 @@ cmd.exe /C echo %GREETING% %*]]
         assert.spy(ctx.write_shell_exec_wrapper).was_called_with(
             match.is_ref(ctx),
             "my-wrapper-script",
-            ("node %q"):format(path.concat { dummy:get_install_path(), js_rel_path })
+            ("node %q"):format(path.concat { ctx:get_install_path(), js_rel_path })
         )
     end)
 
     it("should write Ruby exec wrapper", function()
         local js_rel_path = path.concat { "some", "obscure", "path", "server.js" }
-        local dummy = registry.get_package "dummy"
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx, "write_shell_exec_wrapper")
         stub(ctx.fs, "file_exists")
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), js_rel_path).returns(true)
@@ -119,14 +122,13 @@ cmd.exe /C echo %GREETING% %*]]
         assert.spy(ctx.write_shell_exec_wrapper).was_called_with(
             match.is_ref(ctx),
             "my-wrapper-script",
-            ("ruby %q"):format(path.concat { dummy:get_install_path(), js_rel_path })
+            ("ruby %q"):format(path.concat { ctx:get_install_path(), js_rel_path })
         )
     end)
 
     it("should not write Node exec wrapper if the target script doesn't exist", function()
         local js_rel_path = path.concat { "some", "obscure", "path", "server.js" }
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx, "write_shell_exec_wrapper")
         stub(ctx.fs, "file_exists")
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), js_rel_path).returns(false)
@@ -143,9 +145,7 @@ cmd.exe /C echo %GREETING% %*]]
     end)
 
     it("should write Python exec wrapper", function()
-        local dummy = registry.get_package "dummy"
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx.cwd, "get")
         ctx.cwd.get.returns "/tmp/placeholder"
         stub(ctx, "write_shell_exec_wrapper")
@@ -156,13 +156,12 @@ cmd.exe /C echo %GREETING% %*]]
         assert.spy(ctx.write_shell_exec_wrapper).was_called_with(
             match.is_ref(ctx),
             "my-wrapper-script",
-            ("%q -m my-module"):format(path.concat { pip3.venv_path(dummy:get_install_path()), "python" })
+            ("%q -m my-module"):format(path.concat { pypi.venv_path(ctx:get_install_path()), "python" })
         )
     end)
 
     it("should not write Python exec wrapper if module cannot be found", function()
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx.cwd, "get")
         ctx.cwd.get.returns "/tmp/placeholder"
         stub(ctx, "write_shell_exec_wrapper")
@@ -181,10 +180,8 @@ cmd.exe /C echo %GREETING% %*]]
     end)
 
     it("should write exec wrapper", function()
-        local dummy = registry.get_package "dummy"
         local exec_rel_path = path.concat { "obscure", "path", "to", "server" }
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx, "write_shell_exec_wrapper")
         stub(ctx.fs, "file_exists")
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), exec_rel_path).returns(true)
@@ -197,14 +194,13 @@ cmd.exe /C echo %GREETING% %*]]
             .was_called_with(
                 match.is_ref(ctx),
                 "my-wrapper-script",
-                ("%q"):format(path.concat { dummy:get_install_path(), exec_rel_path })
+                ("%q"):format(path.concat { ctx:get_install_path(), exec_rel_path })
             )
     end)
 
     it("should not write exec wrapper if target executable doesn't exist", function()
         local exec_rel_path = path.concat { "obscure", "path", "to", "server" }
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx, "write_shell_exec_wrapper")
         stub(ctx.fs, "file_exists")
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), exec_rel_path).returns(false)
@@ -219,9 +215,7 @@ cmd.exe /C echo %GREETING% %*]]
 
     it("should write PHP exec wrapper", function()
         local php_rel_path = path.concat { "some", "obscure", "path", "cli.php" }
-        local dummy = registry.get_package "dummy"
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx, "write_shell_exec_wrapper")
         stub(ctx.fs, "file_exists")
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), php_rel_path).returns(true)
@@ -232,14 +226,13 @@ cmd.exe /C echo %GREETING% %*]]
         assert.spy(ctx.write_shell_exec_wrapper).was_called_with(
             match.is_ref(ctx),
             "my-wrapper-script",
-            ("php %q"):format(path.concat { dummy:get_install_path(), php_rel_path })
+            ("php %q"):format(path.concat { ctx:get_install_path(), php_rel_path })
         )
     end)
 
     it("should not write PHP exec wrapper if the target script doesn't exist", function()
         local php_rel_path = path.concat { "some", "obscure", "path", "cli.php" }
-        local handle = InstallHandleGenerator "dummy"
-        local ctx = InstallContextGenerator(handle)
+        local ctx = test_helpers.create_context()
         stub(ctx, "write_shell_exec_wrapper")
         stub(ctx.fs, "file_exists")
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), php_rel_path).returns(false)
@@ -250,5 +243,40 @@ cmd.exe /C echo %GREETING% %*]]
 
         assert.equals([[Cannot write PHP exec wrapper for path "some/obscure/path/cli.php" as it doesn't exist.]], err)
         assert.spy(ctx.write_shell_exec_wrapper).was_called(0)
+    end)
+
+    it("should await callback-style async function", function()
+        local value = a.run_blocking(function()
+            local ctx = test_helpers.create_context()
+            return ctx:execute(function()
+                return ctx:await(function(resolve, reject)
+                    vim.defer_fn(function()
+                        resolve "Value!"
+                    end, 500)
+                end)
+            end)
+        end)
+
+        assert.equals("Value!", value)
+    end)
+
+    it("should propagate errors in callback-style async function", function()
+        local guard = spy.new()
+        local error = assert.has_error(function()
+            a.run_blocking(function()
+                local ctx = test_helpers.create_context()
+                return ctx:execute(function()
+                    ctx:await(function(resolve, reject)
+                        vim.defer_fn(function()
+                            reject "Error!"
+                        end, 500)
+                    end)
+                    guard()
+                end)
+            end)
+        end)
+
+        assert.equals("Error!", error)
+        assert.spy(guard).was_called(0)
     end)
 end)

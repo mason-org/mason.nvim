@@ -74,7 +74,25 @@ _.filter = fun.curryN(vim.tbl_filter, 2)
 ---@type fun(map_fn: (fun(item: T): U), items: T[]): U[]
 _.map = fun.curryN(vim.tbl_map, 2)
 
-_.flatten = fun.curryN(vim.tbl_flatten, 1)
+---@param tbl table
+---@return table
+_.flatten = function(tbl)
+    local result = {}
+    --- @param _tbl table<any,any>
+    local function _tbl_flatten(_tbl)
+        local n = #_tbl
+        for i = 1, n do
+            local v = _tbl[i]
+            if type(v) == "table" then
+                _tbl_flatten(v)
+            elseif v then
+                table.insert(result, v)
+            end
+        end
+    end
+    _tbl_flatten(tbl)
+    return result
+end
 
 ---@generic T
 ---@param map_fn fun(item: T): Optional

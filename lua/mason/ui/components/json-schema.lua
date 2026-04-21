@@ -14,7 +14,7 @@ local property_type_highlights = {
 }
 
 local function resolve_type(property_schema)
-    if vim.tbl_islist(property_schema.type) then
+    if _.is_list(property_schema.type) then
         return table.concat(property_schema.type, " | ")
     elseif property_schema.type == "array" then
         if property_schema.items then
@@ -108,12 +108,12 @@ local function JsonSchema(pkg, schema_id, state, schema, key, level, key_width, 
             )
         end
         return Ui.Node(nodes)
-    elseif vim.tbl_islist(schema) then
+    elseif _.is_list(schema) then
         return Ui.Node(_.map(function(sub_schema)
             return JsonSchema(pkg, schema_id, state, sub_schema)
         end, schema))
-    else
-        -- Leaf node (aka any type that isn't an object)
+    elseif level > 0 then -- Leaf nodes cannot occupy the root level.
+        -- Leaf node (aka any type that isn't an object).
         local type = resolve_type(schema)
         local heading
         local label = (key_prefix .. key .. (" "):rep(key_width or 0)):sub(1, key_width + 5) -- + 5 to account for key_prefix plus some extra whitespace
@@ -155,7 +155,7 @@ local function JsonSchema(pkg, schema_id, state, schema, key, level, key_width, 
                     { { "type", "MasonMuted" }, { type, type_highlight } },
                 }
 
-                if vim.tbl_islist(schema.enum) then
+                if _.is_list(schema.enum) then
                     for idx, enum in ipairs(schema.enum) do
                         local enum_description = ""
                         if schema.enumDescriptions and schema.enumDescriptions[idx] then
@@ -175,6 +175,8 @@ local function JsonSchema(pkg, schema_id, state, schema, key, level, key_width, 
                 })
             end),
         }
+    else
+        return Ui.Node {}
     end
 end
 

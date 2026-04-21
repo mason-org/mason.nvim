@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "primary_source": {
+    "type": "npm",
+    "package": "@angular/language-server"
+  },
+  "links": {
+    "bin": {
+      "ngserver": "node_modules/.bin/ngserver"
+    }
+  },
+  "metrics": {
+    "start_time": 1694752057715,
+    "completion_time": 1694752066467
+  },
+  "secondary_sources": [
+    {
+      "type": "npm",
+      "package": "typescript"
+    }
+  ],
+  "name": "angular-language-server"
+}

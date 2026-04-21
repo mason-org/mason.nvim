@@ -7,7 +7,6 @@ end
 
 function M.open()
     local api = require "mason.ui.instance"
-    require("mason-registry").refresh(function() end)
     api.window.open()
 end
 

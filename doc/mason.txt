@@ -1,6 +1,6 @@
 *mason.nvim*
 
-Minimum version of neovim: 0.7.0
+Minimum version of neovim: 0.10.0
 
 Author: William Boman
                                                             *mason-help-guide*
@@ -21,31 +21,6 @@ default. Executables are linked to a single `bin/` directory, which
 from Neovim builtins (shell, terminal, etc.) as well as other 3rd party
 plugins.
 
------------------
-MASON.NVIM LUA API
-                                                         *mason-api-reference*
-Mason offers a public Lua API that allows you to further customize or
-extend Mason. You may find documentation for it in the link below.
-
-https://github.com/williamboman/mason.nvim/blob/main/doc/reference.md
-
-Note ~
-    APIs not listed in the document are not considered public and are subject
-    to unannounced breaking changes.
-
------------------
-EXTENSION PLUGINS
-                                                            *mason-extensions*
-Extension plugins help fill gaps with the rest of the Neovim ecosystem.
-
-mason-lspconfig ~
-    `mason-lspconfig` bridges Mason with the `lspconfig` plugin - making
-    it easier to use both plugins together.
-    https://github.com/williamboman/mason-lspconfig.nvim
-
-3rd party extensions ~
-    https://github.com/williamboman/mason.nvim/wiki/Extensions
-
 ==============================================================================
 REQUIREMENTS                                              *mason-requirements*
 
@@ -53,7 +28,7 @@ REQUIREMENTS                                              *mason-requirements*
 utilities (for example, `wget`, `curl`, and `Invoke-WebRequest` are all
 perfect substitutes). The _minimum_ recommended requirements are:
 
--   neovim `>= 0.7.0`
+-   neovim `>= 0.10.0`
 -   For Unix systems: `git(1)`, `curl(1)` or `wget(1)`, `unzip(1)`, `tar(1)`,
     `gzip(1)`
 -   For Windows systems: pwsh or powershell, git, tar, and 7zip or peazip or
@@ -75,7 +50,7 @@ function:
     require("mason").setup()
 <
 Mason will do the following during setup:
-    1) enhance the Neovim session's PATH environment
+    1) add Mason's `bin/` directory to the Neovim session's PATH
     2) register commands (|mason-commands|)
 
 Refer to |mason-settings| for all available settings.
@@ -106,9 +81,9 @@ finished installing:
     $ nvim --headless -c "MasonInstall lua-language-server rust-analyzer" -c qall
 <
 Note: ~
-    You may also use the Lua API |mason-api-reference| to programmatically
-    manage package installations. Through this interface you will also gain
-    access to more features to allow further customization.
+    You may also use Mason's Lua API to programmatically manage package
+    installations. Through this interface you will also gain access to more
+    features to allow further customization.
 
 -----------------
 THE MASON WINDOW
@@ -147,27 +122,14 @@ with registries appearing first in the list having precedence.
 HOW TO INSTALL PACKAGES                        *mason-how-to-install-packages*
 
 You may install packages either via the command interface or via Mason's Lua
-APIs. See |:MasonInstall| or |mason-api-reference| for more details.
+APIs. See |:MasonInstall| for more details.
 
 ==============================================================================
 HOW TO USE PACKAGES                                *mason-how-to-use-packages*
 
 Although many packages are perfectly usable out of the box through Neovim
 builtins, it is recommended to use other 3rd party plugins to further
-integrate these. The following plugins are recommended:
-
--   LSP: `lspconfig` & `mason-lspconfig.nvim`
--   DAP: `nvim-dap` & `nvim-dap-ui`
--   Linters: `null-ls.nvim` or `nvim-lint`
--   Formatters: `null-ls.nvim` or `formatter.nvim`
-
-formatter.nvim        https://github.com/mhartington/formatter.nvim
-lspconfig             https://github.com/neovim/nvim-lspconfig
-mason-lspconfig.nvim  https://github.com/williamboman/mason-lspconfig.nvim
-null-ls.nvim          https://github.com/jose-elias-alvarez/null-ls.nvim
-nvim-dap              https://github.com/mfussenegger/nvim-dap
-nvim-dap-ui           https://github.com/rcarriga/nvim-dap-ui
-nvim-lint             https://github.com/mfussenegger/nvim-lint
+integrate these.
 
 See also ~
     Execute external commands: |:!cmd|.
@@ -329,7 +291,12 @@ Example:
 
             ---@since 1.0.0
             -- The border to use for the UI window. Accepts same border values as |nvim_open_win()|.
-            border = "none",
+            -- Defaults to `:h 'winborder'` if nil.
+            border = nil,
+
+            ---@since 1.11.0
+            -- The backdrop opacity. 0 is fully opaque, 100 is fully transparent.
+            backdrop = 60,
 
             ---@since 1.0.0
             -- Width of the window. Accepts:
@@ -455,15 +422,19 @@ to redo whatever is failing after changing the log level in order to capture
 new log entries.
 
 ==============================================================================
-Lua module: mason
-
+Lua module: "mason"
+>lua
+    require("mason")
+<
                                                                *mason.setup()*
 setup({config})
     Sets up mason with the provided {config} (see |mason-settings|).
 
 ==============================================================================
-Lua module: mason-registry
-
+Lua module: "mason-registry"
+>lua
+    require("mason-registry")
+<
                                                *mason-registry.is_installed()*
 is_installed({package_name})
     Checks whether the provided package name is installed. In many situations,
@@ -537,7 +508,7 @@ get_all_package_specs()
     |mason-registry.get_all_packages()| because it loads fewer modules.
 
     Returns:
-        (PackageSpec | RegistryPackageSpec)[]
+        RegistryPackageSpec[]
 
                                                      *mason-registry.update()*
 update({callback})

@@ -15,7 +15,7 @@ function M.install(crate, version, opts)
     opts = opts or {}
     log.fmt_debug("cargo: install %s %s %s", crate, version, opts)
     local ctx = installer.context()
-    ctx.stdio_sink.stdout(("Installing crate %s@%s…\n"):format(crate, version))
+    ctx.stdio_sink:stdout(("Installing crate %s@%s…\n"):format(crate, version))
     return ctx.spawn.cargo {
         "install",
         "--root",

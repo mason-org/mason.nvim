@@ -1,12 +1,22 @@
-local installer = require "mason-core.installer"
 local match = require "luassert.match"
 local std = require "mason-core.installer.managers.std"
 local stub = require "luassert.stub"
+local test_helpers = require "mason-test.helpers"
 
 describe("std unpack [Unix]", function()
+    local snapshot
+
+    before_each(function()
+        snapshot = assert.snapshot()
+    end)
+
+    after_each(function()
+        snapshot:revert()
+    end)
+
     it("should unpack .gz", function()
-        local ctx = create_dummy_context()
-        installer.exec_in_context(ctx, function()
+        local ctx = test_helpers.create_context()
+        ctx:execute(function()
             std.unpack "file.gz"
         end)
 
@@ -21,12 +31,12 @@ describe("std unpack [Unix]", function()
         end)
 
         it("should use gtar if available", function()
-            local ctx = create_dummy_context()
+            local ctx = test_helpers.create_context()
             stub(ctx.fs, "unlink")
             stub(vim.fn, "executable")
             vim.fn.executable.on_call_with("gtar").returns(1)
 
-            installer.exec_in_context(ctx, function()
+            ctx:execute(function()
                 std.unpack "file.tar.gz"
             end)
 
@@ -35,9 +45,9 @@ describe("std unpack [Unix]", function()
         end)
 
         it("should unpack .tar", function()
-            local ctx = create_dummy_context()
+            local ctx = test_helpers.create_context()
             stub(ctx.fs, "unlink")
-            installer.exec_in_context(ctx, function()
+            ctx:execute(function()
                 std.unpack "file.tar"
             end)
 
@@ -48,9 +58,9 @@ describe("std unpack [Unix]", function()
         end)
 
         it("should unpack .tar.bz2", function()
-            local ctx = create_dummy_context()
+            local ctx = test_helpers.create_context()
             stub(ctx.fs, "unlink")
-            installer.exec_in_context(ctx, function()
+            ctx:execute(function()
                 std.unpack "file.tar.bz2"
             end)
 
@@ -61,9 +71,9 @@ describe("std unpack [Unix]", function()
         end)
 
         it("should unpack .tar.gz", function()
-            local ctx = create_dummy_context()
+            local ctx = test_helpers.create_context()
             stub(ctx.fs, "unlink")
-            installer.exec_in_context(ctx, function()
+            ctx:execute(function()
                 std.unpack "file.tar.gz"
             end)
 
@@ -74,9 +84,9 @@ describe("std unpack [Unix]", function()
         end)
 
         it("should unpack .tar.xz", function()
-            local ctx = create_dummy_context()
+            local ctx = test_helpers.create_context()
             stub(ctx.fs, "unlink")
-            installer.exec_in_context(ctx, function()
+            ctx:execute(function()
                 std.unpack "file.tar.xz"
             end)
 
@@ -87,9 +97,9 @@ describe("std unpack [Unix]", function()
         end)
 
         it("should unpack .tar.zst", function()
-            local ctx = create_dummy_context()
+            local ctx = test_helpers.create_context()
             stub(ctx.fs, "unlink")
-            installer.exec_in_context(ctx, function()
+            ctx:execute(function()
                 std.unpack "file.tar.zst"
             end)
 
@@ -101,9 +111,9 @@ describe("std unpack [Unix]", function()
     end)
 
     it("should unpack .vsix", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         stub(ctx.fs, "unlink")
-        installer.exec_in_context(ctx, function()
+        ctx:execute(function()
             std.unpack "file.vsix"
         end)
 
@@ -114,9 +124,9 @@ describe("std unpack [Unix]", function()
     end)
 
     it("should unpack .zip", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         stub(ctx.fs, "unlink")
-        installer.exec_in_context(ctx, function()
+        ctx:execute(function()
             std.unpack "file.zip"
         end)
 
@@ -129,9 +139,9 @@ end)
 
 describe("std clone", function()
     it("should clone", function()
-        local ctx = create_dummy_context()
-        installer.exec_in_context(ctx, function()
-            std.clone "https://github.com/williamboman/mason.nvim"
+        local ctx = test_helpers.create_context()
+        ctx:execute(function()
+            std.clone "https://github.com/mason-org/mason.nvim"
         end)
 
         assert.spy(ctx.spawn.git).was_called(1)
@@ -140,15 +150,15 @@ describe("std clone", function()
             "--depth",
             "1",
             vim.NIL, -- recursive
-            "https://github.com/williamboman/mason.nvim",
+            "https://github.com/mason-org/mason.nvim",
             ".",
         }
     end)
 
     it("should clone and checkout rev", function()
-        local ctx = create_dummy_context()
-        installer.exec_in_context(ctx, function()
-            std.clone("https://github.com/williamboman/mason.nvim", {
+        local ctx = test_helpers.create_context()
+        ctx:execute(function()
+            std.clone("https://github.com/mason-org/mason.nvim", {
                 rev = "e1fd03b1856cb5ad8425f49e18353dc524b02f91",
                 recursive = true,
             })
@@ -160,7 +170,7 @@ describe("std clone", function()
             "--depth",
             "1",
             "--recursive",
-            "https://github.com/williamboman/mason.nvim",
+            "https://github.com/mason-org/mason.nvim",
             ".",
         }
         assert

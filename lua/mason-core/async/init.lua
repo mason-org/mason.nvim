@@ -6,8 +6,12 @@ local exports = {}
 local Promise = {}
 Promise.__index = Promise
 
-function Promise.new(resolver)
-    return setmetatable({ resolver = resolver, has_resolved = false }, Promise)
+function Promise:new(resolver)
+    local instance = {}
+    setmetatable(instance, self)
+    instance.resolver = resolver
+    instance.has_resolved = false
+    return instance
 end
 
 ---@param success boolean
@@ -27,7 +31,7 @@ function Promise:__call(callback)
 end
 
 local function await(resolver)
-    local ok, value = co.yield(Promise.new(resolver))
+    local ok, value = co.yield(Promise:new(resolver))
     if not ok then
         error(value[1], 0)
     end
@@ -75,6 +79,9 @@ local function new_execution_context(suspend_fn, callback, ...)
             return
         end
         local ok, promise_or_result = co.resume(thread, ...)
+        if cancelled or not thread then
+            return
+        end
         if ok then
             if co.status(thread) == "suspended" then
                 if getmetatable(promise_or_result) == Promise then
@@ -156,7 +163,7 @@ end
 ---@param suspend_fns async fun()[]
 ---@param mode '"first"' | '"all"'
 local function wait(suspend_fns, mode)
-    local channel = require("mason-core.async.control").OneShotChannel.new()
+    local channel = require("mason-core.async.control").OneShotChannel:new()
     if #suspend_fns == 0 then
         return
     end

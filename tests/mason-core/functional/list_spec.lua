@@ -292,6 +292,29 @@ describe("functional: list", function()
             })
         )
     end)
+
+    it("should flatten tables", function()
+        assert.same({ 1, 2, 3 }, _.flatten { 1, 2, 3 })
+        assert.same({ 1, 2, 3, "a" }, _.flatten { 1, { 2 }, { 3 }, "a" })
+        assert.same({ 1, 2, 3, 4, 5 }, _.flatten { 1, { { 2, 3 }, { 4 } }, { 5 } })
+    end)
+
+    -- Note: this is not necessarily a requirement, but it is expected to behave this way as of writing.
+    it("should flatten keyed tables", function()
+        assert.same(
+            {
+                "-xvf",
+                "file",
+            },
+            _.flatten {
+                { "-xvf", { "file" } },
+                cmd = "tar",
+                env = {
+                    LC_ALL = "latin",
+                },
+            }
+        )
+    end)
 end)
 
 describe("list immutability", function()

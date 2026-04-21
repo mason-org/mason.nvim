@@ -1,6 +1,8 @@
 local Optional = require "mason-core.optional"
+local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
 local a = require "mason-core.async"
+local fetch = require "mason-core.fetch"
 local fs = require "mason-core.fs"
 local platform = require "mason-core.platform"
 local spawn = require "mason-core.spawn"
@@ -50,4 +52,16 @@ return {
         return get_all_versions(pkg):map(_.compose(Optional.of_nilable, _.last)):and_then(synthesize_pkg(pkg))
     end,
     get_all_versions = get_all_versions,
+    get_supported_python_versions = function(pkg, version)
+        return fetch(("https://pypi.org/pypi/%s/%s/json"):format(pkg, version))
+            :map_catching(vim.json.decode)
+            :map(_.path { "info", "requires_python" })
+            :and_then(function(requires_python)
+                if type(requires_python) ~= "string" or requires_python == "" then
+                    return Result.failure "Package does not specify supported Python versions."
+                else
+                    return Result.success(requires_python)
+                end
+            end)
+    end,
 }

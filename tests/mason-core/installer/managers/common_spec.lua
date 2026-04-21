@@ -7,6 +7,7 @@ local mock = require "luassert.mock"
 local spy = require "luassert.spy"
 local std = require "mason-core.installer.managers.std"
 local stub = require "luassert.stub"
+local test_helpers = require "mason-test.helpers"
 
 describe("common manager :: download", function()
     it("should parse download files from common structure", function()
@@ -54,11 +55,11 @@ describe("common manager :: download", function()
     end)
 
     it("should download files", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         stub(std, "download_file", mockx.returns(Result.success()))
         stub(std, "unpack", mockx.returns(Result.success()))
 
-        local result = installer.exec_in_context(ctx, function()
+        local result = ctx:execute(function()
             return common.download_files(ctx, {
                 { out_file = "file.jar", download_url = "https://example.com/file.jar" },
                 { out_file = "LICENSE.md", download_url = "https://example.com/LICENSE" },
@@ -75,12 +76,12 @@ describe("common manager :: download", function()
     end)
 
     it("should download files to specified directory", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         stub(std, "download_file", mockx.returns(Result.success()))
         stub(std, "unpack", mockx.returns(Result.success()))
         stub(ctx.fs, "mkdirp")
 
-        local result = installer.exec_in_context(ctx, function()
+        local result = ctx:execute(function()
             return common.download_files(ctx, {
                 { out_file = "lib/file.jar", download_url = "https://example.com/file.jar" },
                 { out_file = "doc/LICENSE.md", download_url = "https://example.com/LICENSE" },
@@ -99,7 +100,7 @@ end)
 
 describe("common manager :: build", function()
     it("should run build instruction", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         local uv = require "mason-core.async.uv"
         spy.on(ctx, "promote_cwd")
         stub(uv, "write")
@@ -115,7 +116,7 @@ describe("common manager :: build", function()
             end
         )
 
-        local result = installer.exec_in_context(ctx, function()
+        local result = ctx:execute(function()
             return common.run_build_instruction {
                 run = [[npm install && npm run compile]],
                 env = {
@@ -143,11 +144,11 @@ describe("common manager :: build", function()
     end)
 
     it("should promote cwd if not staged", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         stub(ctx, "promote_cwd")
         stub(ctx.spawn, "bash", mockx.returns(Result.success()))
 
-        local result = installer.exec_in_context(ctx, function()
+        local result = ctx:execute(function()
             return common.run_build_instruction {
                 run = "make",
                 staged = false,

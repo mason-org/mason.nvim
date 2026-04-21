@@ -4,3 +4,4 @@ exclude = ["lua/mason-vendor/*"]
 [rules]
 unused_variable = "allow"
 shadowing = "allow"
+mixed_table = "allow"

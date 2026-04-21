@@ -42,7 +42,7 @@ make generate
 
 # Tests
 
-[Tests](https://github.com/williamboman/mason.nvim/tree/main/tests) MAY be added or modified to reflect any new changes.
+[Tests](https://github.com/mason-org/mason.nvim/tree/main/tests) MAY be added or modified to reflect any new changes.
 Tests can be executed on Unix systems like so:
 
 ```sh

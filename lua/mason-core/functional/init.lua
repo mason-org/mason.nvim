@@ -3,9 +3,7 @@ local _ = {}
 local function lazy_require(module)
     return setmetatable({}, {
         __index = function(m, k)
-            return function(...)
-                return require(module)[k](...)
-            end
+            return require(module)[k]
         end,
     })
 end
@@ -133,6 +131,7 @@ _.assoc = tbl.assoc
 local typ = lazy_require "mason-core.functional.type"
 _.is_nil = typ.is_nil
 _.is = typ.is
+_.is_list = typ.is_list
 
 -- TODO do something else with these
 

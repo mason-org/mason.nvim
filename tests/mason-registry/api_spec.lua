@@ -3,6 +3,16 @@ local match = require "luassert.match"
 local stub = require "luassert.stub"
 
 describe("mason-registry API", function()
+    local snapshot
+
+    before_each(function()
+        snapshot = assert.snapshot()
+    end)
+
+    after_each(function()
+        snapshot:revert()
+    end)
+
     ---@module "mason-registry.api"
     local api
     local fetch

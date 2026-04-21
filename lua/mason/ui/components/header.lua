@@ -2,6 +2,7 @@ local Ui = require "mason-core.ui"
 local _ = require "mason-core.functional"
 local p = require "mason.ui.palette"
 local settings = require "mason.settings"
+local version = require "mason.version"
 
 ---@param state InstallerUiState
 return function(state)
@@ -12,9 +13,11 @@ return function(state)
             Ui.HlTextNode {
                 Ui.When(state.view.is_showing_help, {
                     p.header_secondary(" " .. state.header.title_prefix .. " mason.nvim "),
+                    p.header_secondary(version.VERSION .. " "),
                     p.none((" "):rep(#state.header.title_prefix + 1)),
                 }, {
                     p.header " mason.nvim ",
+                    p.header(version.VERSION .. " "),
                     state.view.is_searching and p.Comment " (search mode, press <Esc> to clear)" or p.none "",
                 }),
                 Ui.When(state.view.is_showing_help, {
@@ -26,10 +29,10 @@ return function(state)
                     p.highlight(settings.current.ui.keymaps.toggle_help),
                     p.none " for help",
                 }),
-                { p.Comment "https://github.com/williamboman/mason.nvim" },
+                { p.Comment "https://github.com/mason-org/mason.nvim" },
             },
         }),
-        Ui.When(not state.packages.new_versions_check.is_checking and #uninstalled_registries > 0, function()
+        Ui.When(not state.info.registry_update.in_progress and #uninstalled_registries > 0, function()
             return Ui.CascadingStyleNode({ "INDENT" }, {
                 Ui.EmptyLine(),
                 Ui.HlTextNode {
@@ -49,7 +52,7 @@ return function(state)
             })
         end),
         Ui.When(
-            not state.packages.new_versions_check.is_checking and state.info.registry_update_error,
+            not state.info.registry_update.in_progress and state.info.registry_update.error,
             Ui.CascadingStyleNode({ "INDENT" }, {
                 Ui.HlTextNode {
                     {
@@ -57,7 +60,7 @@ return function(state)
                     },
                     {
                         p.none "  ",
-                        p.Comment(state.info.registry_update_error),
+                        p.Comment(state.info.registry_update.error),
                     },
                 },
                 Ui.EmptyLine(),

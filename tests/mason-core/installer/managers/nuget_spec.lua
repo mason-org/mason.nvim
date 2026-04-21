@@ -1,11 +1,12 @@
-local installer = require "mason-core.installer"
+local match = require "luassert.match"
 local nuget = require "mason-core.installer.managers.nuget"
 local spy = require "luassert.spy"
+local test_helpers = require "mason-test.helpers"
 
 describe("nuget manager", function()
     it("should install", function()
-        local ctx = create_dummy_context()
-        installer.exec_in_context(ctx, function()
+        local ctx = test_helpers.create_context()
+        ctx:execute(function()
             nuget.install("nuget-package", "1.0.0")
         end)
 
@@ -21,13 +22,15 @@ describe("nuget manager", function()
     end)
 
     it("should write output", function()
-        local ctx = create_dummy_context()
+        local ctx = test_helpers.create_context()
         spy.on(ctx.stdio_sink, "stdout")
 
-        installer.exec_in_context(ctx, function()
+        ctx:execute(function()
             nuget.install("nuget-package", "1.0.0")
         end)
 
-        assert.spy(ctx.stdio_sink.stdout).was_called_with "Installing nuget package nuget-package@1.0.0…\n"
+        assert
+            .spy(ctx.stdio_sink.stdout)
+            .was_called_with(match.is_ref(ctx.stdio_sink), "Installing nuget package nuget-package@1.0.0…\n")
     end)
 end)

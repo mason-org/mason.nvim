@@ -4,7 +4,7 @@ local a = require "mason-core.async"
 local match = require "luassert.match"
 local spy = require "luassert.spy"
 
-describe("result", function()
+describe("Result ::", function()
     it("should create success", function()
         local result = Result.success "Hello!"
         assert.is_true(result:is_success())
@@ -250,27 +250,28 @@ describe("Result.try", function()
         assert.equals("42", failure:err_or_nil())
     end)
 
-    it(
-        "should allow calling async functions inside try blocks",
-        async_test(function()
-            assert.same(
-                Result.success "Hello, world!",
-                Result.try(function(try)
+    it("should allow calling async functions inside try blocks", function()
+        assert.same(
+            Result.success "Hello, world!",
+            a.run_blocking(function()
+                return Result.try(function(try)
                     a.sleep(10)
                     local hello = try(Result.success "Hello, ")
                     local world = try(Result.success "world!")
                     return hello .. world
                 end)
-            )
-            local failure = Result.try(function(try)
+            end)
+        )
+        local failure = a.run_blocking(function()
+            return Result.try(function(try)
                 a.sleep(10)
                 local err = try(Result.success "42")
                 error(err)
             end)
-            assert.is_true(failure:is_failure())
-            assert.is_true(match.matches ": 42$"(failure:err_or_nil()))
         end)
-    )
+        assert.is_true(failure:is_failure())
+        assert.is_true(match.matches ": 42$"(failure:err_or_nil()))
+    end)
 
     it("should not unwrap result values in try blocks", function()
         assert.same(
@@ -300,12 +301,11 @@ describe("Result.try", function()
         )
     end)
 
-    it(
-        "should allow nesting try blocks in async scope",
-        async_test(function()
-            assert.same(
-                Result.success "Hello from the underworld!",
-                Result.try(function(try)
+    it("should allow nesting try blocks in async scope", function()
+        assert.same(
+            Result.success "Hello from the underworld!",
+            a.run_blocking(function()
+                return Result.try(function(try)
                     a.sleep(10)
                     local greeting = try(Result.success "Hello from the %s!")
                     a.sleep(10)
@@ -316,7 +316,7 @@ describe("Result.try", function()
                         return value
                     end)))
                 end)
-            )
-        end)
-    )
+            end)
+        )
+    end)
 end)

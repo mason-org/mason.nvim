@@ -11,4 +11,6 @@ _.is = fun.curryN(function(typ, value)
     return type(value) == typ
 end, 2)
 
+_.is_list = vim.islist or vim.tbl_islist
+
 return _

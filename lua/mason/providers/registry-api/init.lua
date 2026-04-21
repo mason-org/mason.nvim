@@ -1,3 +1,5 @@
+local Result = require "mason-core.result"
+local _ = require "mason-core.functional"
 local api = require "mason-registry.api"
 
 ---@type Provider
@@ -30,6 +32,18 @@ return {
         end,
         get_all_versions = function(pkg)
             return api.pypi.versions.all { package = pkg }
+        end,
+        get_supported_python_versions = function(pkg, version)
+            return api.pypi.versions
+                .get({ package = pkg, version = version })
+                :map(_.prop "requires_python")
+                :and_then(function(requires_python)
+                    if type(requires_python) ~= "string" or requires_python == "" then
+                        return Result.failure "Package does not specify supported Python versions."
+                    else
+                        return Result.success(requires_python)
+                    end
+                end)
         end,
     },
     rubygems = {

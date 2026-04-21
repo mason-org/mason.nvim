@@ -10,7 +10,7 @@ jobs:
     cbfmt:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
             - name: Download cbfmt
               run: |
                   mkdir /tmp/cbfmt && cd $_
@@ -20,14 +20,14 @@ jobs:
             - name: Download Stylua
               run: |
                   mkdir /tmp/stylua && cd $_
-                  curl -fsSL -o stylua.zip "https://github.com/JohnnyMorganz/StyLua/releases/download/v0.18.0/stylua-linux.zip"
+                  curl -fsSL -o stylua.zip "https://github.com/JohnnyMorganz/StyLua/releases/download/v0.20.0/stylua-linux.zip"
                   unzip -d /usr/local/bin stylua.zip
             - name: Download Shellharden
               run: |
                   mkdir /tmp/shellharden && cd $_
-                  curl -fsSL -o shellharden.tar.gz https://github.com/alsuren/cargo-quickinstall/releases/download/shellharden-4.2.0-x86_64-unknown-linux-gnu/shellharden-4.2.0-x86_64-unknown-linux-gnu.tar.gz
+                  curl -fsSL -o shellharden.tar.gz https://github.com/anordal/shellharden/releases/download/v4.3.1/shellharden-x86_64-unknown-linux-gnu.tar.gz
                   tar -xvf shellharden.tar.gz
                   mv shellharden /usr/local/bin/
             - name: Run cbfmt check
               # Lua examples in README.md doesn't conform to Stylua rules, on purpose.
-              run: find . -name '*.md' -not -path './dependencies/*' -not -path './README.md' | xargs cbfmt --check
+              run: find . -name '*.md' -not -path './dependencies/*' -not -path './README.md' -not -path './CHANGELOG.md' | xargs cbfmt --check

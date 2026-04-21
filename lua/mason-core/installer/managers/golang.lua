@@ -15,7 +15,7 @@ function M.install(pkg, version, opts)
         opts = opts or {}
         log.fmt_debug("golang: install %s %s %s", pkg, version, opts)
         local ctx = installer.context()
-        ctx.stdio_sink.stdout(("Installing go package %s@%s…\n"):format(pkg, version))
+        ctx.stdio_sink:stdout(("Installing go package %s@%s…\n"):format(pkg, version))
         local env = {
             GOBIN = ctx.cwd:get(),
         }
