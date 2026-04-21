@@ -15,6 +15,10 @@ local function purl(overrides)
 end
 
 describe("npm compiler :: parsing", function()
+    after_each(function()
+        settings.set(settings._DEFAULT_SETTINGS)
+    end)
+
     it("should parse package", function()
         settings.set {
             npm = {

@@ -15,6 +15,10 @@ local function purl(overrides)
 end
 
 describe("pypi compiler :: parsing", function()
+    after_each(function()
+        settings.set(settings._DEFAULT_SETTINGS)
+    end)
+
     it("should parse package", function()
         settings.set {
             pip = {
@@ -47,6 +51,7 @@ describe("pypi compiler :: installing", function()
     end)
 
     after_each(function()
+        settings.set(settings._DEFAULT_SETTINGS)
         snapshot:revert()
     end)
 
@@ -88,6 +93,5 @@ describe("pypi compiler :: installing", function()
             "1.5.0",
             { extra = "lsp", extra_packages = { "extra" }, install_extra_args = { "--proxy", "http://localghost" } }
         )
-        settings.set(settings._DEFAULT_SETTINGS)
     end)
 end)
