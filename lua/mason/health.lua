@@ -113,14 +113,15 @@ local function check_core_utils()
     end
 
     if platform.is.win then
+        local powershell = vim.fn.executable "pwsh" == 1 and "pwsh" or "powershell"
         check {
-            cmd = "pwsh",
+            cmd = powershell,
             args = {
                 "-NoProfile",
                 "-Command",
-                [[$PSVersionTable.PSVersion, $PSVersionTable.OS, $PSVersionTable.Platform -join " "]],
+                [[$PSVersionTable.PSVersion, $PSVersionTable.OS, $PSVersionTable.Platform -join ' ']],
             },
-            name = "pwsh",
+            name = powershell,
         }
         check { cmd = "7z", args = { "--help" }, name = "7z", relaxed = true }
     end
