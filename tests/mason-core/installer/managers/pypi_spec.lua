@@ -92,6 +92,8 @@ describe("pypi manager", function()
         stub(ctx.fs, "file_exists")
         stub(providers.pypi, "get_supported_python_versions", mockx.returns(Result.success ">=3.12"))
         stub(vim.fn, "executable")
+        vim.fn.executable.on_call_with("python3.14").returns(0)
+        vim.fn.executable.on_call_with("python3.13").returns(0)
         vim.fn.executable.on_call_with("python3.12").returns(1)
         stub(spawn, "python3.12")
         spawn["python3.12"].on_call_with({ "--version" }).returns(Result.success { stdout = "Python 3.12.0" })
@@ -120,13 +122,13 @@ describe("pypi manager", function()
         spy.on(ctx.stdio_sink, "stderr")
         stub(ctx, "promote_cwd")
         stub(ctx.fs, "file_exists")
-        stub(providers.pypi, "get_supported_python_versions", mockx.returns(Result.success ">=3.8"))
+        stub(providers.pypi, "get_supported_python_versions", mockx.returns(Result.success ">=3.10"))
         stub(vim.fn, "executable")
+        vim.fn.executable.on_call_with("python3.14").returns(0)
+        vim.fn.executable.on_call_with("python3.13").returns(0)
         vim.fn.executable.on_call_with("python3.12").returns(0)
         vim.fn.executable.on_call_with("python3.11").returns(0)
         vim.fn.executable.on_call_with("python3.10").returns(0)
-        vim.fn.executable.on_call_with("python3.9").returns(0)
-        vim.fn.executable.on_call_with("python3.8").returns(0)
         stub(spawn, "python3", mockx.returns(Result.success()))
         spawn.python3.on_call_with({ "--version" }).returns(Result.success { stdout = "Python 3.5.0" })
 
@@ -139,7 +141,7 @@ describe("pypi manager", function()
         end)
 
         assert.same(
-            Result.failure "Failed to find a python3 installation in PATH that meets the required versions (>=3.8). Found version: 3.5.0.",
+            Result.failure "Failed to find a python3 installation in PATH that meets the required versions (>=3.10). Found version: 3.5.0.",
             result
         )
         assert
@@ -154,13 +156,13 @@ describe("pypi manager", function()
             spy.on(ctx.stdio_sink, "stderr")
             stub(ctx, "promote_cwd")
             stub(ctx.fs, "file_exists")
-            stub(providers.pypi, "get_supported_python_versions", mockx.returns(Result.success ">=3.8"))
+            stub(providers.pypi, "get_supported_python_versions", mockx.returns(Result.success ">=3.10"))
             stub(vim.fn, "executable")
+            vim.fn.executable.on_call_with("python3.14").returns(0)
+            vim.fn.executable.on_call_with("python3.13").returns(0)
             vim.fn.executable.on_call_with("python3.12").returns(0)
             vim.fn.executable.on_call_with("python3.11").returns(0)
             vim.fn.executable.on_call_with("python3.10").returns(0)
-            vim.fn.executable.on_call_with("python3.9").returns(0)
-            vim.fn.executable.on_call_with("python3.8").returns(0)
             stub(spawn, "python3", mockx.returns(Result.success()))
             spawn.python3.on_call_with({ "--version" }).returns(Result.success { stdout = "Python 3.5.0" })
 
@@ -182,7 +184,7 @@ describe("pypi manager", function()
             }
             assert.spy(ctx.stdio_sink.stderr).was_called_with(
                 match.is_ref(ctx.stdio_sink),
-                "Warning: The resolved python3 version 3.5.0 is not compatible with the required Python versions: >=3.8.\n"
+                "Warning: The resolved python3 version 3.5.0 is not compatible with the required Python versions: >=3.10.\n"
             )
         end
     )
@@ -192,11 +194,11 @@ describe("pypi manager", function()
         spy.on(ctx.stdio_sink, "stderr")
         stub(ctx, "promote_cwd")
         stub(ctx.fs, "file_exists")
-        stub(providers.pypi, "get_supported_python_versions", mockx.returns(Result.success ">=3.8"))
+        stub(providers.pypi, "get_supported_python_versions", mockx.returns(Result.success ">=3.10"))
         stub(vim.fn, "executable")
-        vim.fn.executable.on_call_with("python3.12").returns(1)
+        vim.fn.executable.on_call_with("python3.14").returns(1)
         stub(spawn, "python3", mockx.returns(Result.success()))
-        spawn.python3.on_call_with({ "--version" }).returns(Result.success { stdout = "Python 3.8.0" })
+        spawn.python3.on_call_with({ "--version" }).returns(Result.success { stdout = "Python 3.10.0" })
 
         ctx:execute(function()
             pypi.init {
@@ -208,7 +210,7 @@ describe("pypi manager", function()
 
         assert.spy(ctx.promote_cwd).was_called(1)
         assert.spy(ctx.spawn.python3).was_called(1)
-        assert.spy(ctx.spawn["python3.12"]).was_called(0)
+        assert.spy(ctx.spawn["python3.14"]).was_called(0)
         assert.spy(ctx.spawn.python3).was_called_with {
             "-m",
             "venv",
