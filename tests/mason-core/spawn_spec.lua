@@ -193,6 +193,24 @@ describe("async spawn", function()
             )
         end)
 
+        it("should handle being unable to find PATH env", function()
+            stub(process, "spawn", function(_, _, callback)
+                callback(true, 0, 0)
+            end)
+
+            local result = a.run_blocking(spawn.bash, { "arg1", env_raw = { SOME_ENV = "value" } })
+            assert.is_true(result:is_success())
+            assert.spy(process.spawn).was_called(1)
+            assert.spy(process.spawn).was_called_with(
+                vim.fn.exepath "bash",
+                match.tbl_containing {
+                    args = match.same { "arg1" },
+                    env = match.is_table(),
+                },
+                match.is_function()
+            )
+        end)
+
         it("should use exepath if env_raw.PATH is set", function()
             stub(process, "spawn", function(_, _, callback)
                 callback(true, 0, 0)
