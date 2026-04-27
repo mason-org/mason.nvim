@@ -54,12 +54,13 @@ local function Failure(err, cmd)
     }))
 end
 
-local get_path_from_env_list = _.compose(_.strip_prefix "PATH=", _.find_first(_.starts_with "PATH="))
+local get_path_from_env_list =
+    _.compose(_.if_else(_.is_nil, _.identity, _.strip_prefix "PATH="), _.find_first(_.starts_with "PATH="))
 
 ---@class SpawnArgs
 ---@field with_paths string[]? Paths to add to the PATH environment variable.
----@field env table<string, string>? Example { SOME_ENV = "value", SOME_OTHER_ENV = "some_value" }
----@field env_raw string[]? Example: { "SOME_ENV=value", "SOME_OTHER_ENV=some_value" }
+---@field env table<string, string>? Environment variables to merge with the current environment. Example { SOME_ENV = "value", SOME_OTHER_ENV = "some_value" }
+---@field env_raw string[]? The environment to start the process with, will not merge with the current environment. Example: { "SOME_ENV=value", "SOME_OTHER_ENV=some_value" }
 ---@field stdio_sink StdioSink? If provided, will be used to write to stdout and stderr.
 ---@field cwd string?
 ---@field on_spawn (fun(handle: luv_handle, stdio: luv_pipe[], pid: integer))? Will be called when the process successfully spawns.
