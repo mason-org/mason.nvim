@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.3.0](https://github.com/mason-org/mason.nvim/compare/v2.2.1...v2.3.0) (2026-04-27)
+
+
+### Features
+
+* **npm:** add `install_args` setting ([#1581](https://github.com/mason-org/mason.nvim/issues/1581)) ([8fdc4b0](https://github.com/mason-org/mason.nvim/commit/8fdc4b0a563768c04476042b9cc765c149560bbe))
+
+
+### Bug Fixes
+
+* actually emit the receipt in uninstall event payloads ([#2071](https://github.com/mason-org/mason.nvim/issues/2071)) ([b03fb0f](https://github.com/mason-org/mason.nvim/commit/b03fb0f20bc1d43daf558cda981a2be22e73ac42))
+* **powershell:** conform to single quotes ([#1740](https://github.com/mason-org/mason.nvim/issues/1740)) ([12ddd18](https://github.com/mason-org/mason.nvim/commit/12ddd182d9efbdc848b540f16484a583d52da0fb))
+* **spawn:** handle cases where PATH env on Windows is not set ([#2080](https://github.com/mason-org/mason.nvim/issues/2080)) ([cb8445f](https://github.com/mason-org/mason.nvim/commit/cb8445f8ce85d957416c106b780efd51c6298f89))
+
 ## [2.2.1](https://github.com/mason-org/mason.nvim/compare/v2.2.0...v2.2.1) (2026-01-07)
 
 
