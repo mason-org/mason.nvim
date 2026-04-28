@@ -9,6 +9,7 @@ local display = require "mason-core.ui.display"
 local notify = require "mason-core.notify"
 local registry = require "mason-registry"
 local settings = require "mason.settings"
+local spinner = require "mason-core.spinner"
 
 local Header = require "mason.ui.components.header"
 local Help = require "mason.ui.components.help"
@@ -229,8 +230,10 @@ local function setup_handle(handle)
         if handle.state == "QUEUED" then
             mutate_package_grouping(handle.package, "queued", true)
         elseif handle.state == "ACTIVE" then
+            spinner.instances[handle.package.name]:start()
             mutate_package_grouping(handle.package, "installing", true)
         elseif handle.state == "CLOSED" then
+            spinner.instances[handle.package.name]:stop()
             mutate_state(function(state)
                 state.packages.states[handle.package.name].is_terminated = false
             end)
@@ -605,6 +608,7 @@ local function setup_package(pkg)
     pkg:on("install:handle", setup_handle)
 
     pkg:on("install:success", function()
+        spinner.instances[pkg.name]:stop()
         vim.schedule(function()
             notify(("%s was successfully installed."):format(pkg.name))
         end)
@@ -621,6 +625,7 @@ local function setup_package(pkg)
         "install:failed",
         ---@param handle InstallHandle
         function(handle)
+            spinner.instances[pkg.name]:stop()
             if handle.is_terminated then
                 -- If installation was explicitly terminated - restore to "pristine" state
                 mutate_state(function(state)
@@ -682,6 +687,7 @@ local function setup_packages(packages)
 end
 
 registry:on("update:failed", function(errors)
+    spinner.instances.registries:stop()
     mutate_state(function(state)
         state.info.registry_update.percentage_complete = 0
         state.info.registry_update.in_progress = false
@@ -690,6 +696,7 @@ registry:on("update:failed", function(errors)
 end)
 
 registry:on("update:success", function()
+    spinner.instances.registries:stop()
     setup_packages(registry.get_all_packages())
     update_registry_info()
     check_new_package_versions()
@@ -708,12 +715,18 @@ registry:on("update:success", function()
 end)
 
 registry:on("update:start", function()
+    spinner.instances.registries:start()
     mutate_state(function(state)
         state.packages.outdated_packages = {}
         state.info.registry_update.error = nil
         state.info.registry_update.in_progress = true
         state.info.registry_update.percentage_complete = 0
     end)
+end)
+
+spinner.event:on("change", function()
+    -- just refresh UI, nothing change.
+    mutate_state(function(state) end)
 end)
 
 registry:on("update:progress", function(finished, all)
