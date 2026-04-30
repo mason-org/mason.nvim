@@ -2,6 +2,7 @@ local _ = require "mason-core.functional"
 local fs = require "mason-core.fs"
 local log = require "mason-core.log"
 local path = require "mason-core.path"
+local platform = require "mason-core.platform"
 local registry = require "mason-registry"
 local settings = require "mason.settings"
 
@@ -37,10 +38,23 @@ local M = {}
 local LOCKFILE_BACKUP_DIR = path.concat { vim.fn.stdpath "cache", "mason", "lockfiles" }
 
 ---@param file string
+local function gzip(file)
+    if vim.fn.executable "gzip" == 1 then
+        vim.system({ "gzip", file }, { text = true }, function(obj)
+            if obj.code ~= 0 or obj.signal ~= 0 then
+                log.warn("Failed to gzip backup file.", obj.stdout, obj.stderr)
+            end
+        end)
+    end
+end
+
+---@param file string
 local function backup_lockfile(file)
     if not fs.sync.dir_exists(LOCKFILE_BACKUP_DIR) then
         fs.sync.mkdirp(LOCKFILE_BACKUP_DIR)
     end
+    -- We store the contents in memory and write a new file in the backup location in order to avoid race conditions.
+    local contents = fs.sync.read_file(file)
     local seconds, microseconds = vim.uv.gettimeofday()
     local milliseconds = seconds * 1000 + math.floor(microseconds / 1000)
     local base_backup_file = path.concat { LOCKFILE_BACKUP_DIR, ("mason-%s.lock"):format(milliseconds) }
@@ -50,14 +64,8 @@ local function backup_lockfile(file)
         backup_file = base_backup_file .. "." .. i
         i = i + 1
     end
-    fs.sync.copy_file(file, backup_file)
-    if vim.fn.executable "gzip" == 1 then
-        vim.system({ "gzip", backup_file }, { text = true }, function(obj)
-            if obj.code ~= 0 or obj.signal ~= 0 then
-                log.warn("Failed to gzip backup file.", obj.stdout, obj.stderr)
-            end
-        end)
-    end
+    fs.sync.write_file(backup_file, contents)
+    gzip(backup_file)
     return backup_file
 end
 
