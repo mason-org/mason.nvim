@@ -92,6 +92,8 @@ describe("pypi manager", function()
         stub(ctx.fs, "file_exists")
         stub(providers.pypi, "get_supported_python_versions", mockx.returns(Result.success ">=3.12"))
         stub(vim.fn, "executable")
+        vim.fn.executable.on_call_with("python3.14").returns(0)
+        vim.fn.executable.on_call_with("python3.13").returns(0)
         vim.fn.executable.on_call_with("python3.12").returns(1)
         stub(spawn, "python3.12")
         spawn["python3.12"].on_call_with({ "--version" }).returns(Result.success { stdout = "Python 3.12.0" })
@@ -115,6 +117,43 @@ describe("pypi manager", function()
         }
     end)
 
+    it("should find versioned candidates in ascending order", function()
+        local ctx = test_helpers.create_context()
+        stub(ctx, "promote_cwd")
+        stub(ctx.fs, "file_exists")
+        stub(providers.pypi, "get_supported_python_versions", mockx.returns(Result.success ">=3.12"))
+        stub(vim.fn, "executable")
+        vim.fn.executable.on_call_with("python3.14").returns(1)
+        vim.fn.executable.on_call_with("python3.13").returns(1)
+        vim.fn.executable.on_call_with("python3.12").returns(1)
+        stub(spawn, "python3.14")
+        stub(spawn, "python3.13")
+        stub(spawn, "python3.12")
+        spawn["python3.14"].on_call_with({ "--version" }).returns(Result.success { stdout = "Python 3.14.0" })
+        spawn["python3.13"].on_call_with({ "--version" }).returns(Result.success { stdout = "Python 3.13.0" })
+        spawn["python3.12"].on_call_with({ "--version" }).returns(Result.success { stdout = "Python 3.12.0" })
+        ctx.fs.file_exists.on_call_with(match.ref(ctx.fs), "venv/bin/python").returns(true)
+
+        ctx:execute(function()
+            pypi.init {
+                package = { name = "cmake-language-server", version = "0.1.10" },
+                upgrade_pip = false,
+                install_extra_args = {},
+            }
+        end)
+
+        assert.spy(ctx.spawn["python3.14"]).was_not_called()
+        assert.spy(ctx.spawn["python3.13"]).was_not_called()
+        assert.spy(ctx.promote_cwd).was_called(1)
+        assert.spy(ctx.spawn["python3.12"]).was_called(1)
+        assert.spy(ctx.spawn["python3.12"]).was_called_with {
+            "-m",
+            "venv",
+            "--system-site-packages",
+            "venv",
+        }
+    end)
+
     it("should error if unable to find a suitable python3 version", function()
         local ctx = test_helpers.create_context()
         spy.on(ctx.stdio_sink, "stderr")
@@ -122,6 +161,8 @@ describe("pypi manager", function()
         stub(ctx.fs, "file_exists")
         stub(providers.pypi, "get_supported_python_versions", mockx.returns(Result.success ">=3.8"))
         stub(vim.fn, "executable")
+        vim.fn.executable.on_call_with("python3.14").returns(0)
+        vim.fn.executable.on_call_with("python3.13").returns(0)
         vim.fn.executable.on_call_with("python3.12").returns(0)
         vim.fn.executable.on_call_with("python3.11").returns(0)
         vim.fn.executable.on_call_with("python3.10").returns(0)
@@ -156,6 +197,8 @@ describe("pypi manager", function()
             stub(ctx.fs, "file_exists")
             stub(providers.pypi, "get_supported_python_versions", mockx.returns(Result.success ">=3.8"))
             stub(vim.fn, "executable")
+            vim.fn.executable.on_call_with("python3.14").returns(0)
+            vim.fn.executable.on_call_with("python3.13").returns(0)
             vim.fn.executable.on_call_with("python3.12").returns(0)
             vim.fn.executable.on_call_with("python3.11").returns(0)
             vim.fn.executable.on_call_with("python3.10").returns(0)
