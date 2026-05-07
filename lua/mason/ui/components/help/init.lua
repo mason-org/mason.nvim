@@ -134,10 +134,6 @@ local function GenericHelp(state)
                     p.none "- ",
                     p.highlight "https://github.com/mason-org/mason.nvim/blob/main/CONTRIBUTING.md",
                 },
-                {
-                    p.none "- ",
-                    p.highlight "https://github.com/mason-org/mason.nvim/blob/main/doc/reference.md",
-                },
             },
         }),
         Ui.EmptyLine(),
