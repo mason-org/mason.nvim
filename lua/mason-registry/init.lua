@@ -1,13 +1,17 @@
 local EventEmitter = require "mason-core.EventEmitter"
 local InstallLocation = require "mason-core.installer.InstallLocation"
 local log = require "mason-core.log"
+local path = require "mason-core.path"
 local uv = vim.loop
 local LazySourceCollection = require "mason-registry.sources"
 
 -- singleton
 local Registry = EventEmitter:new()
 
-Registry.sources = LazySourceCollection:new()
+Registry.sources = LazySourceCollection:new(path.concat { vim.fn.stdpath "cache", "mason-registry-update" })
+Registry.system_sources =
+    LazySourceCollection:new(path.concat { vim.fn.stdpath "cache", "mason-system-registry-update" }, true)
+
 ---@type table<string, string[]>
 Registry.aliases = {}
 
@@ -35,6 +39,21 @@ end
 function Registry.has_package(pkg_name)
     local ok = pcall(Registry.get_package, pkg_name)
     return ok
+end
+
+---Returns an instance of the Package class if the provided package name exists. This function errors if a package
+---cannot be found.
+---@param pkg_name string
+---@return Package
+function Registry.get_system_package(pkg_name)
+    for source in Registry.system_sources:iterate() do
+        local pkg = source:get_package(pkg_name)
+        if pkg then
+            return pkg
+        end
+    end
+    log.fmt_error("Cannot find system package %q.", pkg_name)
+    error(("Cannot find system package %q."):format(pkg_name))
 end
 
 function Registry.get_installed_package_names()
@@ -103,49 +122,61 @@ function Registry.get_package_aliases(name)
     return Registry.aliases[name] or {}
 end
 
----@param callback? fun(success: boolean, updated_registries: RegistrySource[])
+---@async
+---@param sources LazySourceCollection
+local function update(sources)
+    local installer = require "mason-registry.installer"
+
+    if sources.install_channel then
+        log.debug "Registry update already in progress."
+        return sources.install_channel:receive():get_or_throw()
+    else
+        log.debug "Updating the registry."
+        Registry:emit("update:start", sources)
+        return installer
+            .install(sources, function(finished, all)
+                Registry:emit("update:progress", finished, all)
+            end)
+            :on_success(function(updated_registries)
+                log.fmt_debug("Successfully updated %d registries.", #updated_registries)
+                Registry:emit("update:success", updated_registries)
+            end)
+            :on_failure(function(errors)
+                log.error("Failed to update registries.", errors)
+                Registry:emit("update:failed", errors)
+            end)
+            :get_or_throw()
+    end
+end
+
+---@alias RegistryUpdateCallback fun(success: boolean, updated_registries: RegistrySource[])
+
+---@param callback? RegistryUpdateCallback
+function Registry.update_system(callback)
+    local a = require "mason-core.async"
+    local noop = function() end
+    a.run(update, callback or noop, Registry.system_sources)
+end
+
+---@param callback? RegistryUpdateCallback
 function Registry.update(callback)
     local a = require "mason-core.async"
-    local installer = require "mason-registry.installer"
     local noop = function() end
-
-    a.run(function()
-        if installer.channel then
-            log.debug "Registry update already in progress."
-            return installer.channel:receive():get_or_throw()
-        else
-            log.debug "Updating the registry."
-            Registry:emit("update:start", Registry.sources)
-            return installer
-                .install(Registry.sources, function(finished, all)
-                    Registry:emit("update:progress", finished, all)
-                end)
-                :on_success(function(updated_registries)
-                    log.fmt_debug("Successfully updated %d registries.", #updated_registries)
-                    Registry:emit("update:success", updated_registries)
-                end)
-                :on_failure(function(errors)
-                    log.error("Failed to update registries.", errors)
-                    Registry:emit("update:failed", errors)
-                end)
-                :get_or_throw()
-        end
-    end, callback or noop)
+    a.run(update, callback or noop, Registry.sources)
 end
 
 local REGISTRY_STORE_TTL = 86400 -- 24 hrs
 
----@param callback? fun(success: boolean, updated_registries: RegistrySource[])
-function Registry.refresh(callback)
-    log.debug "Refreshing the registry."
+---@param sources LazySourceCollection
+---@param callback? RegistryUpdateCallback
+local function refresh(sources, callback)
     local a = require "mason-core.async"
-    local installer = require "mason-registry.installer"
 
-    local state = installer.get_registry_state()
-    if state and Registry.sources:is_all_installed() then
+    local state = sources:get_install_state()
+    if state and sources:is_all_installed() then
         local registry_age = os.time() - state.timestamp
 
-        if registry_age <= REGISTRY_STORE_TTL and state.checksum == Registry.sources:checksum() then
+        if registry_age <= REGISTRY_STORE_TTL and state.checksum == sources:checksum() then
             log.fmt_debug(
                 "Registry refresh is not necessary yet. Registry age=%d, checksum=%s",
                 registry_age,
@@ -158,25 +189,25 @@ function Registry.refresh(callback)
         end
     end
 
-    local function async_update()
-        return a.wait(function(resolve, reject)
-            Registry.update(function(success, result)
-                if success then
-                    resolve(result)
-                else
-                    reject(result)
-                end
-            end)
-        end)
-    end
-
     if not callback then
         -- We don't want to error in the synchronous version because of how this function is recommended to be used in
         -- 3rd party code. If accessing the update result is required, users are recommended to pass a callback.
-        pcall(a.run_blocking, async_update)
+        pcall(a.run_blocking, update, sources)
     else
-        a.run(async_update, callback)
+        a.run(update, callback, sources)
     end
+end
+
+---@param callback? RegistryUpdateCallback
+function Registry.refresh(callback)
+    log.debug "Refreshing the registry."
+    refresh(Registry.sources, callback)
+end
+
+---@param callback? RegistryUpdateCallback
+function Registry.refresh_system(callback)
+    log.debug "Refreshing the system registry."
+    refresh(Registry.system_sources, callback)
 end
 
 return Registry

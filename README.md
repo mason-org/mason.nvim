@@ -207,6 +207,14 @@ local DEFAULT_SETTINGS = {
         "github:mason-org/mason-registry",
     },
 
+    ---@since 2.3.0
+    -- [Advanced setting]
+    -- The registries to source system packages from. Accepts multiple entries. Should a package with the same name exist in
+    -- multiple registries, the registry listed first will be used.
+    system_registries = {
+        "github:mason-org/mason-system-registry",
+    },
+
     ---@since 1.0.0
     -- The provider implementations to use for resolving supplementary package metadata (e.g., all available versions).
     -- Accepts multiple entries, where later entries will be used as fallback should prior providers fail.
@@ -238,6 +246,15 @@ local DEFAULT_SETTINGS = {
         -- and is not recommended.
         --
         -- Example: { "--proxy", "https://proxyserver" }
+        install_args = {},
+    },
+
+    npm = {
+        ---@since 2.3.0
+        -- These args will be added to `npm install` calls. Note that setting extra args might impact intended behavior
+        -- and is not recommended.
+        --
+        -- Example: { "--registry", "https://registry.npmjs.org/" }
         install_args = {},
     },
 

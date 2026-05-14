@@ -302,7 +302,7 @@ function InstallContext:build_receipt()
 end
 
 function InstallContext:get_install_path()
-    return self.location:package(self.package.name)
+    return self.package:get_install_path(self.location)
 end
 
 return InstallContext

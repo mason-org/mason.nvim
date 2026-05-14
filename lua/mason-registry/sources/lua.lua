@@ -13,12 +13,14 @@ local LuaRegistrySource = {}
 LuaRegistrySource.__index = LuaRegistrySource
 
 ---@param spec LuaRegistrySourceSpec
-function LuaRegistrySource:new(spec)
+---@param system boolean
+function LuaRegistrySource:new(spec, system)
     ---@type LuaRegistrySource
     local instance = {}
     setmetatable(instance, LuaRegistrySource)
     instance.id = spec.id
     instance.spec = spec
+    instance.system = system
     return instance
 end
 

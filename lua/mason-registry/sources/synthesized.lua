@@ -5,6 +5,7 @@ local InstallReceipt = require("mason-core.receipt").InstallReceipt
 local InstallLocation = require "mason-core.installer.InstallLocation"
 local fs = require "mason-core.fs"
 local log = require "mason-core.log"
+local path = require "mason-core.path"
 
 ---@class SynthesizedRegistrySource : RegistrySource
 ---@field buffer table<string, Package>
@@ -68,14 +69,20 @@ end
 ---@param pkg_name string
 ---@return Package?
 function SynthesizedRegistrySource:get_package(pkg_name)
-    local receipt_path = InstallLocation.global():receipt(pkg_name)
-    if fs.sync.file_exists(receipt_path) then
-        local ok, receipt_json = pcall(vim.json.decode, fs.sync.read_file(receipt_path))
-        if ok then
-            local receipt = InstallReceipt.from_json(receipt_json)
-            return self:load_package(pkg_name, receipt)
-        else
-            log.error("Failed to decode package receipt", pkg_name, receipt_json)
+    local location = InstallLocation.global()
+    local receipt_paths = {
+        path.concat { location:package(pkg_name), "mason-receipt.json" },
+        path.concat { location:system_package(pkg_name), "mason-receipt.json" },
+    }
+    for _, receipt_path in ipairs(receipt_paths) do
+        if fs.sync.file_exists(receipt_path) then
+            local ok, receipt_json = pcall(vim.json.decode, fs.sync.read_file(receipt_path))
+            if ok then
+                local receipt = InstallReceipt.from_json(receipt_json)
+                return self:load_package(pkg_name, receipt)
+            else
+                log.error("Failed to decode package receipt", pkg_name, receipt_json)
+            end
         end
     end
 end

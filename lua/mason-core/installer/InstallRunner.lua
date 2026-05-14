@@ -135,7 +135,7 @@ function InstallRunner:execute(opts, callback)
             end))
             ---@type InstallReceipt
             local receipt = try(context:build_receipt())
-            try(Result.pcall(fs.sync.write_file, handle.location:receipt(handle.package.name), receipt:to_json()))
+            try(Result.pcall(fs.sync.write_file, handle.package:get_receipt_path(handle.location), receipt:to_json()))
             return {
                 receipt = receipt,
             }
