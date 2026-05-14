@@ -55,6 +55,18 @@ local DEFAULT_SETTINGS = {
         duration = 24 * 60 * 60, -- 24 hours
     },
 
+    firewall = {
+        ---@since 2.3.0
+        -- Whether to enable the socket.dev firewall (sfw) for supported package sources.
+        -- For more information, refer to https://socket.dev.
+        enabled = false,
+
+        ---@since 2.3.0
+        -- Whether mason.nvim should automatically install and update the Socket Firewall client.
+        -- If false, the sfw binary must exist in PATH if the firewall is enabled.
+        auto_managed = true,
+    },
+
     ---@since 1.0.0
     -- The provider implementations to use for resolving supplementary package metadata (e.g., all available versions).
     -- Accepts multiple entries, where later entries will be used as fallback should prior providers fail.

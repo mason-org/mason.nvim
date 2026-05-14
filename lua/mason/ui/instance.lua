@@ -46,6 +46,7 @@ end
 ---@field is_log_expanded boolean
 ---@field has_failed boolean
 ---@field latest_spawn string?
+---@field firewall_active boolean?
 ---@field linked_executables table<string, string>?
 ---@field installed_purl string?
 ---@field lsp_settings_schema table?
@@ -239,8 +240,13 @@ local function setup_handle(handle)
 
     local function handle_spawnhandle_change()
         mutate_state(function(state)
+            local spawn_handle = handle:peek_spawn_handle()
             state.packages.states[handle.package.name].latest_spawn =
-                handle:peek_spawn_handle():map(tostring):map(_.gsub("\n", "\\n ")):or_else(nil)
+                spawn_handle:map(tostring):map(_.gsub("\n", "\\n ")):or_else(nil)
+            if settings.current.firewall.enabled then
+                state.packages.states[handle.package.name].firewall_active =
+                    spawn_handle:map(_.prop "firewall"):or_else(false)
+            end
         end)
     end
 

@@ -4,6 +4,7 @@ local a = require "mason-core.async"
 local log = require "mason-core.log"
 local platform = require "mason-core.platform"
 local process = require "mason-core.process"
+local settings = require "mason.settings"
 
 local is_not_nil = _.complement(_.equals(vim.NIL))
 
@@ -64,6 +65,7 @@ local get_path_from_env_list =
 ---@field stdio_sink StdioSink? If provided, will be used to write to stdout and stderr.
 ---@field cwd string?
 ---@field on_spawn (fun(handle: luv_handle, stdio: luv_pipe[], pid: integer))? Will be called when the process successfully spawns.
+---@field firewall boolean?
 
 setmetatable(spawn, {
     ---@param canonical_cmd string
@@ -98,6 +100,20 @@ setmetatable(spawn, {
                 a.scheduler()
                 local expanded_cmd = exepath(canonical_cmd, spawn_args.env and get_path_from_env_list(spawn_args.env))
                 if expanded_cmd ~= "" then
+                    cmd = expanded_cmd
+                end
+            end
+
+            if args.firewall and settings.current.firewall.enabled then
+                a.scheduler()
+                table.insert(spawn_args.args, 1, cmd)
+                local expanded_cmd = exepath(
+                    "sfw",
+                    settings.current.firewall.auto_managed and vim.fn.expand "$MASON/opt/mason/system/bin" or nil
+                )
+                if expanded_cmd == "" then
+                    return Failure({ stderr = "Failed to find sfw (Socket Firewall) in PATH." }, "sfw")
+                else
                     cmd = expanded_cmd
                 end
             end

@@ -20,6 +20,7 @@ local uv = vim.loop
 ---@field pid integer
 ---@field cmd string
 ---@field args string[]
+---@field firewall boolean
 local InstallHandleSpawnHandle = {}
 InstallHandleSpawnHandle.__index = InstallHandleSpawnHandle
 
@@ -27,7 +28,8 @@ InstallHandleSpawnHandle.__index = InstallHandleSpawnHandle
 ---@param pid integer
 ---@param cmd string
 ---@param args string[]
-function InstallHandleSpawnHandle:new(luv_handle, pid, cmd, args)
+---@param firewall boolean
+function InstallHandleSpawnHandle:new(luv_handle, pid, cmd, args, firewall)
     ---@type InstallHandleSpawnHandle
     local instance = {}
     setmetatable(instance, InstallHandleSpawnHandle)
@@ -35,6 +37,7 @@ function InstallHandleSpawnHandle:new(luv_handle, pid, cmd, args)
     instance.pid = pid
     instance.cmd = cmd
     instance.args = args
+    instance.firewall = firewall
     return instance
 end
 
@@ -73,8 +76,9 @@ end
 ---@param pid integer
 ---@param cmd string
 ---@param args string[]
-function InstallHandle:register_spawn_handle(luv_handle, pid, cmd, args)
-    local spawn_handles = InstallHandleSpawnHandle:new(luv_handle, pid, cmd, args)
+---@param firewall boolean
+function InstallHandle:register_spawn_handle(luv_handle, pid, cmd, args, firewall)
+    local spawn_handles = InstallHandleSpawnHandle:new(luv_handle, pid, cmd, args, firewall)
     log.fmt_trace("Pushing spawn_handles stack for %s: %s (pid: %s)", self, spawn_handles, pid)
     self.spawn_handles[#self.spawn_handles + 1] = spawn_handles
     self:emit "spawn_handles:change"

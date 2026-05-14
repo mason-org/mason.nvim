@@ -1,5 +1,6 @@
 local Optional = require "mason-core.optional"
 local Result = require "mason-core.result"
+local SystemPackage = require "mason-core.system-package"
 local _ = require "mason-core.functional"
 local a = require "mason-core.async"
 local installer = require "mason-core.installer"
@@ -173,6 +174,8 @@ end
 ---@param pkgs string[]
 ---@param extra_args? string[]
 local function pip_install(pkgs, extra_args)
+    local ctx = installer.context()
+    ctx:require(SystemPackage.sfw)
     return venv_python {
         "-m",
         "pip",
@@ -182,6 +185,7 @@ local function pip_install(pkgs, extra_args)
         "--ignore-installed",
         extra_args or vim.NIL,
         pkgs,
+        firewall = true,
     }
 end
 

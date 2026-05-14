@@ -2,7 +2,6 @@ local a = require "mason-core.async"
 local match = require "luassert.match"
 local path = require "mason-core.path"
 local pypi = require "mason-core.installer.managers.pypi"
-local registry = require "mason-registry"
 local spy = require "luassert.spy"
 local stub = require "luassert.stub"
 local test_helpers = require "mason-test.helpers"
@@ -278,5 +277,92 @@ cmd.exe /C echo %GREETING% %*]]
 
         assert.equals("Error!", error)
         assert.spy(guard).was_called(0)
+    end)
+
+    describe("system packages", function()
+        local Result = require "mason-core.result"
+        local SystemPackage = require "mason-core.system-package"
+        local _ = require "mason-core.functional"
+
+        local NeedsInstallSystemPackage = SystemPackage:new "needs-install"
+        NeedsInstallSystemPackage.needs_install = _.always(Result.success(true))
+        NeedsInstallSystemPackage.install = _.always(Result.success())
+
+        local InstalledSystemPackage = SystemPackage:new "no-needs-install"
+        InstalledSystemPackage.needs_install = _.always(Result.success(false))
+        InstalledSystemPackage.install = _.always(Result.success())
+
+        local FailingSystemPackage = SystemPackage:new "failing-install"
+        FailingSystemPackage.needs_install = _.always(Result.success(true))
+        FailingSystemPackage.install = _.always(Result.failure "There was an issue.")
+
+        it("should install required system packages", function()
+            local ctx = test_helpers.create_context()
+
+            spy.on(ctx.runner, "suspend")
+            spy.on(ctx.runner, "resume")
+            spy.on(NeedsInstallSystemPackage, "install")
+
+            ctx:execute(function()
+                ctx:require(NeedsInstallSystemPackage)
+            end)
+
+            assert.spy(NeedsInstallSystemPackage.install).was_called(1)
+            assert.spy(ctx.runner.suspend).was_called(1)
+            assert.spy(ctx.runner.resume).was_called(1)
+        end)
+
+        it("should not install required system package if needs_install is false", function()
+            local ctx = test_helpers.create_context()
+
+            spy.on(ctx.runner, "suspend")
+            spy.on(ctx.runner, "resume")
+            spy.on(InstalledSystemPackage, "install")
+
+            ctx:execute(function()
+                ctx:require(InstalledSystemPackage)
+            end)
+
+            assert.spy(InstalledSystemPackage.install).was_called(0)
+            assert.spy(ctx.runner.suspend).was_called(0)
+            assert.spy(ctx.runner.resume).was_called(0)
+        end)
+
+        it("should abort installation if system package installation fails", function()
+            local ctx = test_helpers.create_context()
+            local guard = spy.new()
+
+            spy.on(ctx.runner, "suspend")
+            spy.on(ctx.runner, "resume")
+            spy.on(FailingSystemPackage, "install")
+
+            local result = ctx:execute(function()
+                ctx:require(FailingSystemPackage)
+                guard()
+            end)
+
+            assert.spy(FailingSystemPackage.install).was_called(1)
+            assert.spy(ctx.runner.suspend).was_called(1)
+            assert.spy(ctx.runner.resume).was_called(0)
+            assert.spy(guard).was_called(0)
+            assert.same(result, Result.failure "There was an issue.")
+        end)
+
+        it("should continue installation if system package fails to install but --force is enabled", function()
+            local ctx = test_helpers.create_context { install_opts = { force = true } }
+
+            spy.on(ctx.runner, "suspend")
+            spy.on(ctx.runner, "resume")
+            spy.on(FailingSystemPackage, "install")
+
+            local result = ctx:execute(function()
+                ctx:require(FailingSystemPackage)
+                return Result.success "We forced this."
+            end)
+
+            assert.spy(FailingSystemPackage.install).was_called(1)
+            assert.spy(ctx.runner.suspend).was_called(1)
+            assert.same(result, Result.success "We forced this.")
+        end)
     end)
 end)

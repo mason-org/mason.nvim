@@ -271,6 +271,7 @@ local function InstallingPackageComponent(pkg, state)
                 pkg_state.has_failed and p.error(settings.current.ui.icons.package_uninstalled)
                     or p.highlight(settings.current.ui.icons.package_pending),
                 p.none(" " .. pkg.name),
+                pkg_state.firewall_active and p.highlight " (firewall active)" or p.none "",
                 current_state,
                 pkg_state.latest_spawn and p.Comment((" $ %s"):format(pkg_state.latest_spawn)) or p.none "",
             },

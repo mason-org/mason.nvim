@@ -12,7 +12,10 @@ local M = {}
 function M.create_context(opts)
     local pkg = registry.get_package(opts and opts.package or "dummy")
     local handle = InstallHandle:new(pkg, InstallLocation.global())
-    local context = InstallContext:new(handle, opts and opts.install_opts or {})
+    local context = InstallContext:new(handle, opts and opts.install_opts or {}, {
+        suspend = function() end,
+        resume = function() end,
+    })
     context.spawn = setmetatable({}, {
         __index = function(s, cmd)
             s[cmd] = spy.new(function()
