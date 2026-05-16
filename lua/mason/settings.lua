@@ -42,6 +42,19 @@ local DEFAULT_SETTINGS = {
         "github:mason-org/mason-system-registry",
     },
 
+    registry_cache = {
+        ---@since 2.3.0
+        -- [Advanced setting]
+        -- Whether Mason should automatically refresh the registry when needed. If false, the registry will have to be
+        -- updated manually via :MasonUpdate or the :Mason UI.
+        refresh = true,
+
+        ---@since 2.3.0
+        -- Amount of seconds before the local registry cache is considered stale.
+        -- Note that this setting has no effect if refresh is set to false.
+        duration = 24 * 60 * 60, -- 24 hours
+    },
+
     ---@since 1.0.0
     -- The provider implementations to use for resolving supplementary package metadata (e.g., all available versions).
     -- Accepts multiple entries, where later entries will be used as fallback should prior providers fail.

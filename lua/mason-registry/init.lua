@@ -2,6 +2,7 @@ local EventEmitter = require "mason-core.EventEmitter"
 local InstallLocation = require "mason-core.installer.InstallLocation"
 local log = require "mason-core.log"
 local path = require "mason-core.path"
+local settings = require "mason.settings"
 local uv = vim.loop
 local LazySourceCollection = require "mason-registry.sources"
 
@@ -165,18 +166,20 @@ function Registry.update(callback)
     a.run(update, callback or noop, Registry.sources)
 end
 
-local REGISTRY_STORE_TTL = 86400 -- 24 hrs
-
 ---@param sources LazySourceCollection
 ---@param callback? RegistryUpdateCallback
 local function refresh(sources, callback)
+    if not settings.current.registry_cache.refresh then
+        log.debug "Not performing a registry refresh as it's disabled in settings."
+        return true, {}
+    end
     local a = require "mason-core.async"
 
     local state = sources:get_install_state()
     if state and sources:is_all_installed() then
         local registry_age = os.time() - state.timestamp
 
-        if registry_age <= REGISTRY_STORE_TTL and state.checksum == sources:checksum() then
+        if registry_age <= settings.current.registry_cache.duration and state.checksum == sources:checksum() then
             log.fmt_debug(
                 "Registry refresh is not necessary yet. Registry age=%d, checksum=%s",
                 registry_age,
@@ -185,14 +188,14 @@ local function refresh(sources, callback)
             if callback then
                 callback(true, {})
             end
-            return
+            return true, {}
         end
     end
 
     if not callback then
         -- We don't want to error in the synchronous version because of how this function is recommended to be used in
         -- 3rd party code. If accessing the update result is required, users are recommended to pass a callback.
-        pcall(a.run_blocking, update, sources)
+        return pcall(a.run_blocking, update, sources)
     else
         a.run(update, callback, sources)
     end
@@ -201,13 +204,13 @@ end
 ---@param callback? RegistryUpdateCallback
 function Registry.refresh(callback)
     log.debug "Refreshing the registry."
-    refresh(Registry.sources, callback)
+    return refresh(Registry.sources, callback)
 end
 
 ---@param callback? RegistryUpdateCallback
 function Registry.refresh_system(callback)
     log.debug "Refreshing the system registry."
-    refresh(Registry.system_sources, callback)
+    return refresh(Registry.system_sources, callback)
 end
 
 return Registry
