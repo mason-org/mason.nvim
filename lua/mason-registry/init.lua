@@ -171,6 +171,9 @@ end
 local function refresh(sources, callback)
     if not settings.current.registry_cache.refresh then
         log.debug "Not performing a registry refresh as it's disabled in settings."
+        if callback then
+            return callback(true, {})
+        end
         return true, {}
     end
     local a = require "mason-core.async"
@@ -186,7 +189,7 @@ local function refresh(sources, callback)
                 state.checksum
             )
             if callback then
-                callback(true, {})
+                return callback(true, {})
             end
             return true, {}
         end
