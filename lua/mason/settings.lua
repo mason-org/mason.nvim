@@ -134,6 +134,9 @@ local DEFAULT_SETTINGS = {
             ---@since 1.0.0
             -- The list icon to use for packages that are not installed.
             package_uninstalled = "◍",
+            ---@since 2.2.2
+            ---Spinner frame texts
+            spinner_texts = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" },
         },
 
         keymaps = {

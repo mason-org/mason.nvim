@@ -2,6 +2,7 @@ local Ui = require "mason-core.ui"
 local _ = require "mason-core.functional"
 local p = require "mason.ui.palette"
 local settings = require "mason.settings"
+local spinner = require "mason-core.spinner"
 
 local JsonSchema = require "mason.ui.components.json-schema"
 
@@ -205,15 +206,14 @@ local function Installed(state)
                     local registry_count = #state.info.registries
                     local text
                     if registry_count > 1 then
-                        text = p.Comment(
-                            is_all_registries_installed and ("updating %d registries "):format(registry_count)
-                                or ("installing %d registries "):format(registry_count)
-                        )
+                        text = is_all_registries_installed and ("updating %d registries "):format(registry_count)
+                            or ("installing %d registries "):format(registry_count)
                     else
-                        text = p.Comment(is_all_registries_installed and "updating registry " or "installing registry ")
+                        text = is_all_registries_installed and "updating registry " or "installing registry "
                     end
+                    text = string.format("%s%s ", text, spinner.instances.registries)
                     return Ui.VirtualTextNode {
-                        text,
+                        p.Comment(text),
                         styling(
                             ("%-4s"):format(math.floor(state.info.registry_update.percentage_complete * 100) .. "%")
                         ),
@@ -270,7 +270,7 @@ local function InstallingPackageComponent(pkg, state)
             {
                 pkg_state.has_failed and p.error(settings.current.ui.icons.package_uninstalled)
                     or p.highlight(settings.current.ui.icons.package_pending),
-                p.none(" " .. pkg.name),
+                p.none(string.format(" %s %s", pkg.name, spinner.instances[pkg.name])),
                 current_state,
                 pkg_state.latest_spawn and p.Comment((" $ %s"):format(pkg_state.latest_spawn)) or p.none "",
             },
