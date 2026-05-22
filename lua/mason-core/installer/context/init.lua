@@ -21,19 +21,22 @@ local receipt = require "mason-core.receipt"
 ---@field cwd InstallContextCwd
 ---@field opts PackageInstallOpts
 ---@field stdio_sink StdioSink
+---@field runner { suspend: fun(), resume: async fun() }
 ---@field links { bin: table<string, string>, share: table<string, string>, opt: table<string, string> }
 local InstallContext = {}
 InstallContext.__index = InstallContext
 
 ---@param handle InstallHandle
 ---@param opts PackageInstallOpts
-function InstallContext:new(handle, opts)
+---@param runner { suspend: fun(), resume: async fun() }
+function InstallContext:new(handle, opts, runner)
     local cwd = InstallContextCwd:new(handle)
     local spawn = InstallContextSpawn:new(handle, cwd, false)
     local fs = InstallContextFs:new(cwd)
     return setmetatable({
         cwd = cwd,
         spawn = spawn,
+        runner = runner,
         handle = handle,
         location = handle.location, -- for convenience
         package = handle.package, -- for convenience
@@ -264,6 +267,7 @@ function InstallContext:link_bin(executable, rel_path)
 end
 
 InstallContext.CONTEXT_REQUEST = {}
+InstallContext.ABORT = {}
 
 ---@generic T
 ---@param fn fun(context: InstallContext): T
@@ -277,20 +281,48 @@ function InstallContext:execute(fn)
     local step
     local ret_val
     step = function(...)
-        local ok, result = coroutine.resume(thread, ...)
+        local results = { coroutine.resume(thread, ...) }
+        local ok, result = results[1], results[2]
         if not ok then
             error(result, 0)
         elseif result == InstallContext.CONTEXT_REQUEST then
             step(self)
+        elseif result == InstallContext.ABORT then
+            ret_val = Result.failure(results[3])
         elseif coroutine.status(thread) == "suspended" then
             -- yield to parent coroutine
-            step(coroutine.yield(result))
+            step(coroutine.yield(result, unpack(results, 3)))
         else
             ret_val = result
         end
     end
     step(self)
     return ret_val
+end
+
+---@async
+---@param system_pkg SystemPackage
+function InstallContext:require(system_pkg)
+    local result = Result.try(function(try)
+        if try(system_pkg:needs_install()) then
+            self.stdio_sink:stdout("Installing dependency " .. system_pkg.name .. ".\n")
+            self.runner.suspend()
+            try(system_pkg:install():on_failure(function()
+                if self.opts.force then
+                    self.runner.resume()
+                end
+            end))
+            self.runner.resume()
+        end
+    end)
+    if result:is_failure() then
+        if not self.opts.force then
+            self.stdio_sink:stderr "Run with :MasonInstall --force to attempt installation anyway.\n"
+            coroutine.yield(InstallContext.ABORT, result:err_or_nil())
+        else
+            self.stdio_sink:stderr(result:err_or_nil() .. "\n")
+        end
+    end
 end
 
 ---@async

@@ -72,6 +72,7 @@ describe("npm manager", function()
             "my-package@1.0.0",
             vim.NIL, -- extra_packages
             vim.NIL, -- install_extra_args
+            firewall = true,
         }
     end)
 
@@ -89,6 +90,7 @@ describe("npm manager", function()
             "my-package@1.0.0",
             { "extra-package" },
             vim.NIL, -- install_extra_args
+            firewall = true,
         }
     end)
 
@@ -107,6 +109,7 @@ describe("npm manager", function()
             "my-package@1.0.0",
             vim.NIL, -- extra_packages
             { "--registry", "https://registry.npmjs.org/" }, -- install_extra_args
+            firewall = true,
         }
     end)
 

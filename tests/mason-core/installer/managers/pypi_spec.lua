@@ -83,6 +83,7 @@ describe("pypi manager", function()
             "--ignore-installed",
             { "--proxy", "http://localhost" },
             { "pip" },
+            firewall = true,
         }
     end)
 
@@ -282,6 +283,7 @@ describe("pypi manager", function()
                 "pypi-package==1.0.0",
                 vim.NIL, -- extra_packages
             },
+            firewall = true,
         }
     end)
 
@@ -324,6 +326,7 @@ describe("pypi manager", function()
                 "pypi-package[lsp]==1.0.0",
                 vim.NIL, -- extra_packages
             },
+            firewall = true,
         }
     end)
 
@@ -351,6 +354,7 @@ describe("pypi manager", function()
                 "pypi-package==1.0.0",
                 { "extra-package" },
             },
+            firewall = true,
         }
     end)
 end)

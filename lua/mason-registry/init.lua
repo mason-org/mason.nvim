@@ -1,5 +1,6 @@
 local EventEmitter = require "mason-core.EventEmitter"
 local InstallLocation = require "mason-core.installer.InstallLocation"
+local _ = require "mason-core.functional"
 local log = require "mason-core.log"
 local path = require "mason-core.path"
 local settings = require "mason.settings"
@@ -55,6 +56,11 @@ function Registry.get_system_package(pkg_name)
     end
     log.fmt_error("Cannot find system package %q.", pkg_name)
     error(("Cannot find system package %q."):format(pkg_name))
+end
+
+function Registry.has_system_package(pkg_name)
+    local ok = pcall(Registry.get_system_package, pkg_name)
+    return ok
 end
 
 function Registry.get_installed_package_names()

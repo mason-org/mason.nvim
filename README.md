@@ -28,6 +28,7 @@
 -   [Commands](#commands)
 -   [Registries](#registries)
 -   [Screenshots](#screenshots)
+-   [Firewall (socket.dev)](#firewall-socketdev)
 -   [Configuration](#configuration)
 
 ## Introduction
@@ -134,6 +135,39 @@ functions to ensure you have the latest package information before retrieving pa
 |           <img alt="Main window" src="https://github.com/user-attachments/assets/b9a57d21-f551-45ad-a1e5-a9fd66291510">           |                 <img alt="Language search" src="https://github.com/user-attachments/assets/3d24fb7b-2c57-4948-923b-0a42bb627cbe">                 | <img alt="Language filter" src="https://github.com/user-attachments/assets/c0ca5818-3c74-4071-bc41-427a2cd1056d"> |
 | <img alt="Package information" src="https://github.com/user-attachments/assets/6f9f6819-ac97-483d-a77c-8f6c6131ac85"> | <img alt="New package versions" src="https://github.com/user-attachments/assets/ff1adc4d-2fcc-46df-ab4c-291c891efa50"> |   <img alt="Help window" src="https://github.com/user-attachments/assets/1fbe75e4-fe69-4417-83e3-82329e1c236e">   |
 
+## Firewall (socket.dev)
+
+> Socket Firewall is a free tool that blocks malicious packages at install time, giving developers proactive protection
+> against rising supply chain attacks.
+
+`mason.nvim` supports the [Socket.dev firewall](https://socket.dev/). To enable the firewall, turn it on in the configuration:
+
+```lua
+require("mason").setup {
+  firewall = {
+    enabled = true
+  }
+}
+```
+
+By default, `mason.nvim` will automatically install and update the Socket Firewall client. If you want to manage the
+client manually, set `auto_managed` to `false` (this requires the `sfw` binary to be available in your `PATH`):
+
+```lua
+require("mason").setup {
+  firewall = {
+    enabled = true,
+    auto_managed = false
+  }
+}
+```
+
+For more information refer to the [Socket.dev](https://socket.dev/) documentation.
+
+> [!NOTE]
+> If you already use the Socket.dev firewall in a proxy service configuration you don't need to enable the firewall in
+> `mason.nvim`.
+
 ## Configuration
 
 > [`:h mason-settings`][help-mason-settings]
@@ -213,6 +247,31 @@ local DEFAULT_SETTINGS = {
     -- multiple registries, the registry listed first will be used.
     system_registries = {
         "github:mason-org/mason-system-registry",
+    },
+
+    registry_cache = {
+        ---@since 2.3.0
+        -- [Advanced setting]
+        -- Whether Mason should automatically refresh the registry when needed. If false, the registry will have to be
+        -- updated manually via :MasonUpdate or the :Mason UI.
+        refresh = true,
+
+        ---@since 2.3.0
+        -- Amount of seconds before the local registry cache is considered stale.
+        -- Note that this setting has no effect if refresh is set to false.
+        duration = 24 * 60 * 60, -- 24 hours
+    },
+
+    firewall = {
+        ---@since 2.3.0
+        -- Whether to enable the socket.dev firewall (sfw) for supported package sources.
+        -- For more information, refer to https://socket.dev.
+        enabled = false,
+
+        ---@since 2.3.0
+        -- Whether mason.nvim should automatically install and update the Socket Firewall client.
+        -- If false, the sfw binary must exist in PATH if the firewall is enabled.
+        auto_managed = true,
     },
 
     ---@since 1.0.0
