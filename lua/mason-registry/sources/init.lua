@@ -89,7 +89,6 @@ end
 ---TODO this is pulling in a bunch of extra modules at startup due to unique_insert
 ---@param other LazySource
 function LazySource:is_same_location(other)
-    do return false end
     if self.type == other.type then
         return self:get():is_same_location(other:get())
     end

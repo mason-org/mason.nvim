@@ -13,7 +13,7 @@ describe("LazySourceCollection", function()
         coll:append "file:~/registry"
         coll:append "file:$HOME/registry"
 
-        assert.equals(4, coll:size())
+        assert.equals(5, coll:size())
         assert.same("lua:registry", coll:get(1):get_full_id())
         assert.same("github:my-own/registry", coll:get(2):get_full_id())
         assert.same("github:mason-org/mason-registry@2025-05-16", coll:get(3):get_full_id())
