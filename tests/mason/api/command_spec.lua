@@ -62,8 +62,8 @@ describe(":MasonUninstall", function()
         spy.on(Pkg, "uninstall")
         api.MasonUninstall { "dummy", "dummy2" }
         assert.spy(Pkg.uninstall).was_called(2)
-        assert.spy(Pkg.uninstall).was_called_with(match.is_ref(dummy))
-        assert.spy(Pkg.uninstall).was_called_with(match.is_ref(dummy2))
+        assert.spy(Pkg.uninstall).was_called_with(match.is_ref(dummy), {})
+        assert.spy(Pkg.uninstall).was_called_with(match.is_ref(dummy2), {})
     end)
 end)
 
