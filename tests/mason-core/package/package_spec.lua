@@ -167,11 +167,11 @@ describe("Package ::", function()
 
         assert.wait(function()
             assert.spy(uninstall_success_handler).was_called(1)
-            assert.spy(uninstall_success_handler).was_called_with(match.instanceof(receipt.InstallReceipt))
+            assert.spy(uninstall_success_handler).was_called_with(match.instanceof(receipt.InstallReceipt), {})
             assert.spy(package_uninstall_success_handler).was_called(1)
             assert
                 .spy(package_uninstall_success_handler)
-                .was_called_with(match.is_ref(dummy), match.instanceof(receipt.InstallReceipt))
+                .was_called_with(match.is_ref(dummy), match.instanceof(receipt.InstallReceipt), {})
             assert.spy(package_uninstall_failed_handler).was_called(0)
             assert.spy(uninstall_failed_handler).was_called(0)
         end)

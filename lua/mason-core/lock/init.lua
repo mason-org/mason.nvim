@@ -1,8 +1,6 @@
 local _ = require "mason-core.functional"
 local fs = require "mason-core.fs"
 local log = require "mason-core.log"
-local path = require "mason-core.path"
-local platform = require "mason-core.platform"
 local registry = require "mason-registry"
 local settings = require "mason.settings"
 
@@ -35,7 +33,7 @@ local M = {}
 ---@field header LockfileHeader
 ---@field body table<string, LockfilePackage>
 
-local LOCKFILE_BACKUP_DIR = path.concat { vim.fn.stdpath "cache", "mason", "lockfiles" }
+local LOCKFILE_BACKUP_DIR = vim.fs.joinpath(vim.fn.stdpath "cache", "mason", "lockfiles")
 
 ---@param file string
 local function gzip(file)
@@ -57,7 +55,7 @@ local function backup_lockfile(file)
     local contents = fs.sync.read_file(file)
     local seconds, microseconds = vim.uv.gettimeofday()
     local milliseconds = seconds * 1000 + math.floor(microseconds / 1000)
-    local base_backup_file = path.concat { LOCKFILE_BACKUP_DIR, ("mason-%s.lock"):format(milliseconds) }
+    local base_backup_file = vim.fs.joinpath(LOCKFILE_BACKUP_DIR, ("mason-%s.lock"):format(milliseconds))
     local backup_file = base_backup_file
     local i = 1
     while i < 5 and fs.sync.file_exists(backup_file) do

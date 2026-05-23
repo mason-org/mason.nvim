@@ -25,21 +25,21 @@ local DEFAULT_SETTINGS = {
     max_concurrent_installers = 4,
 
     lockfile = {
-        ---@since 2.2.0
+        ---@since 2.4.0
         -- Whether the lockfile should automatically update when packages are installed or uninstalled.
         enabled = false,
 
-        ---@since 2.2.0
+        ---@since 2.4.0
         path = vim.fs.joinpath(vim.fn.stdpath "config", "mason.lock"),
 
         backup = {
-            ---@since 2.2.0
+            ---@since 2.4.0
             -- Whether to backup lockfiles. Lockfiles will be compressed using `gzip` if available.
             -- Note that this will backup every version of the lockfile, and over time may produce a large amount of
             -- files.
             enabled = false,
 
-            ---@since 2.2.0
+            ---@since 2.4.0
             -- The directory in which to save backed up lockfiles.
             path = vim.fs.joinpath(vim.fn.stdpath "cache", "mason", "lockfiles"),
         },

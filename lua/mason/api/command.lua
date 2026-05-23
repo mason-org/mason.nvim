@@ -187,8 +187,9 @@ end, {
 })
 
 ---@param package_names string[]
----@param opts table<string, string | boolean>
+---@param opts? table<string, string | boolean>
 local function MasonUninstall(package_names, opts)
+    opts = opts or {}
     local valid_packages = get_valid_packages(package_names)
     if #valid_packages > 0 then
         _.each(function(target)

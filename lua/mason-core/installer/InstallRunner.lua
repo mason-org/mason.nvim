@@ -107,14 +107,22 @@ function InstallRunner:execute(opts, callback)
                 pcallback(callback, true, result.receipt, metadata)
             end
             handle.package:emit("install:success", result.receipt)
-            registry:emit("package:install:success", handle.package, result.receipt)
+            registry:emit(
+                handle.package.spec.system and "system-package:install:success" or "package:install:success",
+                handle.package,
+                result.receipt
+            )
         else
             log.fmt_error("Installation failed for %s error=%s", handle.package, result)
             if callback then
                 pcallback(callback, false, result, metadata)
             end
             handle.package:emit("install:failed", result)
-            registry:emit("package:install:failed", handle.package, result)
+            registry:emit(
+                handle.package.spec.system and "system-package:install:success" or "package:install:failed",
+                handle.package,
+                result
+            )
         end
     end)
 
