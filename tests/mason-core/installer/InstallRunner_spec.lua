@@ -1,4 +1,5 @@
 local InstallHandle = require "mason-core.installer.InstallHandle"
+local InstallContext = require "mason-core.installer.context"
 local InstallLocation = require "mason-core.installer.InstallLocation"
 local InstallRunner = require "mason-core.installer.InstallRunner"
 local fs = require "mason-core.fs"
@@ -186,7 +187,7 @@ describe("InstallRunner ::", function()
         assert.spy(callback).was_called_with(false, "I've made a mistake.")
     end)
 
-    it("should terminate installation", function()
+    it("should terminate installation and cancel execution", function()
         local location = InstallLocation.global()
         local handle = InstallHandle:new(dummy, location)
         local runner = InstallRunner:new(handle, Semaphore:new(1))
@@ -195,7 +196,7 @@ describe("InstallRunner ::", function()
         stub(dummy.spec.source, "install", function()
             capture(1)
             handle:terminate()
-            a.sleep(0)
+            a.sleep(0) -- we need to yield back control for execution to terminate
             capture(2)
         end)
 
@@ -204,6 +205,31 @@ describe("InstallRunner ::", function()
         assert.spy(callback).was_called_with(false, "Installation was aborted.")
         assert.spy(capture).was_called(1)
         assert.spy(capture).was_called_with(1)
+    end)
+
+    it("should terminate installation", function()
+        local location = InstallLocation.global()
+        local handle = InstallHandle:new(dummy, location)
+        local runner = InstallRunner:new(handle, Semaphore:new(1))
+
+        spy.on(InstallContext, "promote_cwd")
+        local capture = spy.new()
+
+        stub(dummy.spec.source, "install", function()
+            -- Note: here the entire install function is still called, even after the termination, because control is
+            -- never yielded back
+            capture(1)
+            handle:terminate()
+            capture(2)
+        end)
+
+        local callback = test_helpers.sync_runner_execute(runner, {})
+
+        assert.spy(callback).was_called_with(false, "Installation was aborted.")
+        assert.spy(capture).was_called(2)
+        assert.spy(capture).was_called_with(1)
+        assert.spy(capture).was_called_with(2)
+        assert.spy(InstallContext.promote_cwd).was_not_called()
     end)
 
     it("should write debug logs when debug=true", function()

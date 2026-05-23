@@ -127,6 +127,11 @@ function InstallRunner:execute(opts, callback)
     end)
 
     local cancel_execution = a.run(function()
+        -- We schedule here for two reasons:
+        -- 1) make sure the installer function starts execution on the main event loop
+        -- 2) make sure the termination event handler always gets registered before the installer executes
+        a.wait(vim.schedule)
+
         return Result.try(function(try)
             try(self.handle.location:initialize())
             try(self:acquire_permit()):receive()
@@ -142,6 +147,13 @@ function InstallRunner:execute(opts, callback)
             ---@type async fun(ctx: InstallContext): Result
             local installer = try(compiler.compile_installer(handle.package.spec, opts))
             try(context:execute(installer))
+
+            -- The handle may be terminated without the installer yielding back control, effectively bypassing the
+            -- termination event handler which cancels execution of this function. We check if this is the case and
+            -- immediately return a failure.
+            if handle.is_terminated then
+                return Result.failure "Installation was aborted."
+            end
 
             -- 3. promote temporary installation dir
             try(Result.pcall(function()
