@@ -1,17 +1,17 @@
+local Path = require "mason-core.path"
 local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
 local a = require "mason-core.async"
 local fs = require "mason-core.fs"
 local log = require "mason-core.log"
-local path = require "mason-core.path"
 local platform = require "mason-core.platform"
 
 local M = {}
 
 ---@alias LinkContext { type: '"bin"' | '"opt"' | '"share"', prefix: fun(path: string, location: InstallLocation): string }
 
----@type table<'"BIN"' | '"OPT"' | '"SHARE"', LinkContext>
 local LinkContext = {
+    ---@type LinkContext
     BIN = {
         type = "bin",
         ---@param path string
@@ -20,6 +20,7 @@ local LinkContext = {
             return location:bin(path)
         end,
     },
+    ---@type LinkContext
     OPT = {
         type = "opt",
         ---@param path string
@@ -28,12 +29,43 @@ local LinkContext = {
             return location:opt(path)
         end,
     },
+    ---@type LinkContext
     SHARE = {
         type = "share",
         ---@param path string
         ---@param location InstallLocation
         prefix = function(path, location)
             return location:share(path)
+        end,
+    },
+}
+
+local SystemLinkContext = {
+    ---@type LinkContext
+    BIN = {
+        type = "bin",
+        ---@param path string
+        ---@param location InstallLocation
+        prefix = function(path, location)
+            return location:opt(Path.concat { "mason", "system", "bin", path })
+        end,
+    },
+    ---@type LinkContext
+    OPT = {
+        type = "opt",
+        ---@param path string
+        ---@param location InstallLocation
+        prefix = function(path, location)
+            return location:opt(Path.concat { "mason", "system", "opt", path })
+        end,
+    },
+    ---@type LinkContext
+    SHARE = {
+        type = "share",
+        ---@param path string
+        ---@param location InstallLocation
+        prefix = function(path, location)
+            return location:opt(Path.concat { "mason", "system", "share", path })
         end,
     },
 }
@@ -48,7 +80,7 @@ local function unlink(receipt, link_context, location)
             return
         end
         for linked_file in pairs(links) do
-            if receipt:get_schema_version() == "1.0" and link_context == LinkContext.BIN and platform.is.win then
+            if receipt:get_schema_version() == "1.0" and link_context.type == "bin" and platform.is.win then
                 linked_file = linked_file .. ".cmd"
             end
             local share_path = link_context.prefix(linked_file, location)
@@ -63,10 +95,11 @@ end
 ---@nodiscard
 function M.unlink(pkg, receipt, location)
     log.fmt_debug("Unlinking %s", pkg, receipt:get_links())
+    local link_context = pkg.spec.system and SystemLinkContext or LinkContext
     return Result.try(function(try)
-        try(unlink(receipt, LinkContext.BIN, location))
-        try(unlink(receipt, LinkContext.SHARE, location))
-        try(unlink(receipt, LinkContext.OPT, location))
+        try(unlink(receipt, link_context.BIN, location))
+        try(unlink(receipt, link_context.SHARE, location))
+        try(unlink(receipt, link_context.OPT, location))
     end)
 end
 
@@ -78,12 +111,12 @@ local function link(context, link_context, link_fn)
     log.trace("Linking", context.package, link_context.type, context.links[link_context.type])
     return Result.try(function(try)
         for name, rel_path in pairs(context.links[link_context.type]) do
-            if platform.is.win and link_context == LinkContext.BIN then
+            if platform.is.win and link_context.type == "bin" then
                 name = ("%s.cmd"):format(name)
             end
             local new_abs_path = link_context.prefix(name, context.location)
-            local target_abs_path = path.concat { context:get_install_path(), rel_path }
-            local target_rel_path = path.relative(new_abs_path, target_abs_path)
+            local target_abs_path = Path.concat { context:get_install_path(), rel_path }
+            local target_rel_path = Path.relative(new_abs_path, target_abs_path)
 
             -- 1. Ensure destination directory exists
             a.scheduler()
@@ -129,8 +162,9 @@ local function copyfile(context, link_context)
 end
 
 ---@param context InstallContext
-local function win_bin_wrapper(context)
-    return link(context, LinkContext.BIN, function(new_abs_path, __, target_rel_path)
+---@param link_context LinkContext
+local function win_bin_wrapper(context, link_context)
+    return link(context, link_context, function(new_abs_path, __, target_rel_path)
         local windows_target_rel_path = target_rel_path:gsub("/", "\\")
         return Result.pcall(
             fs.async.write_file,
@@ -156,15 +190,16 @@ end
 ---@nodiscard
 function M.link(context)
     log.fmt_debug("Linking %s", context.package)
+    local link_context = context.package.spec.system and SystemLinkContext or LinkContext
     return Result.try(function(try)
         if platform.is.win then
-            try(win_bin_wrapper(context))
-            try(copyfile(context, LinkContext.SHARE))
-            try(copyfile(context, LinkContext.OPT))
+            try(win_bin_wrapper(context, link_context.BIN))
+            try(copyfile(context, link_context.SHARE))
+            try(copyfile(context, link_context.OPT))
         else
-            try(symlink(context, LinkContext.BIN))
-            try(symlink(context, LinkContext.SHARE))
-            try(symlink(context, LinkContext.OPT))
+            try(symlink(context, link_context.BIN))
+            try(symlink(context, link_context.SHARE))
+            try(symlink(context, link_context.OPT))
         end
     end)
 end

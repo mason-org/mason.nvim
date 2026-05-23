@@ -1,5 +1,6 @@
 local Optional = require "mason-core.optional"
 local Result = require "mason-core.result"
+local SystemPackage = require "mason-core.system-package"
 local _ = require "mason-core.functional"
 local a = require "mason-core.async"
 local installer = require "mason-core.installer"
@@ -66,13 +67,16 @@ local function get_versioned_candidates(supported_python_versions)
         end
         return Optional.of(executable)
     end, {
-        { semver.new "3.12.0", "python3.12" },
-        { semver.new "3.11.0", "python3.11" },
-        { semver.new "3.10.0", "python3.10" },
-        { semver.new "3.9.0", "python3.9" },
-        { semver.new "3.8.0", "python3.8" },
-        { semver.new "3.7.0", "python3.7" },
+        -- IMPORTANT: should be in ASCENDING order
         { semver.new "3.6.0", "python3.6" },
+        { semver.new "3.7.0", "python3.7" },
+        { semver.new "3.8.0", "python3.8" },
+        { semver.new "3.9.0", "python3.9" },
+        { semver.new "3.10.0", "python3.10" },
+        { semver.new "3.11.0", "python3.11" },
+        { semver.new "3.12.0", "python3.12" },
+        { semver.new "3.13.0", "python3.13" },
+        { semver.new "3.14.0", "python3.14" },
     })
 end
 
@@ -170,6 +174,8 @@ end
 ---@param pkgs string[]
 ---@param extra_args? string[]
 local function pip_install(pkgs, extra_args)
+    local ctx = installer.context()
+    ctx:require(SystemPackage.sfw)
     return venv_python {
         "-m",
         "pip",
@@ -179,6 +185,7 @@ local function pip_install(pkgs, extra_args)
         "--ignore-installed",
         extra_args or vim.NIL,
         pkgs,
+        firewall = true,
     }
 end
 

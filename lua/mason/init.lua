@@ -26,6 +26,9 @@ function M.setup(config)
     for _, registry in ipairs(settings.current.registries) do
         Registry.sources:append(registry)
     end
+    for _, registry in ipairs(settings.current.system_registries) do
+        Registry.system_sources:append(registry)
+    end
 
     if settings.current.lockfile.enabled then
         require("mason-core.lock").init()

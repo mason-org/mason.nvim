@@ -45,7 +45,14 @@ function InstallRunner:execute(opts, callback)
     local handle = self.handle
     log.fmt_info("Executing installer for %s %s", handle.package, opts)
 
-    local context = InstallContext:new(handle, opts)
+    local context = InstallContext:new(handle, opts, {
+        suspend = function()
+            self:suspend()
+        end,
+        resume = function()
+            self:resume()
+        end,
+    })
 
     local tailed_output = {}
 
@@ -147,7 +154,7 @@ function InstallRunner:execute(opts, callback)
             end))
             ---@type InstallReceipt
             local receipt = try(context:build_receipt())
-            try(Result.pcall(fs.sync.write_file, handle.location:receipt(handle.package.name), receipt:to_json()))
+            try(Result.pcall(fs.sync.write_file, handle.package:get_receipt_path(handle.location), receipt:to_json()))
             return {
                 receipt = receipt,
             }
@@ -222,6 +229,20 @@ function InstallRunner:acquire_permit()
     end)
 
     return Result.success(channel)
+end
+
+function InstallRunner:suspend()
+    if self.global_permit then
+        self.global_permit:forget()
+        self.global_permit = nil
+    end
+end
+
+---@async
+function InstallRunner:resume()
+    self.handle:set_state "QUEUED"
+    self.global_permit = self.global_semaphore:acquire()
+    self.handle:set_state "ACTIVE"
 end
 
 ---@private

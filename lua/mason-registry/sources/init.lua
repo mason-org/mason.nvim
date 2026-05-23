@@ -1,7 +1,9 @@
+local _ = require "mason-core.functional"
 local log = require "mason-core.log"
 
 ---@class RegistrySource
 ---@field id string
+---@field system boolean
 ---@field get_package fun(self: RegistrySource, pkg_name: string): Package?
 ---@field get_all_package_names fun(self: RegistrySource): string[]
 ---@field get_all_package_specs fun(self: RegistrySource): RegistryPackageSpec[]
@@ -16,42 +18,46 @@ local log = require "mason-core.log"
 ---@class LazySource
 ---@field type RegistrySourceType
 ---@field id string
----@field init fun(id: string): RegistrySource
+---@field init fun(id: string, system: boolean): RegistrySource
+---@field system boolean
 local LazySource = {}
 LazySource.__index = LazySource
 
 ---@param id string
-function LazySource.GitHub(id)
+---@param system boolean
+function LazySource.GitHub(id, system)
     local namespace, name = id:match "^(.+)/(.+)$"
     if not namespace or not name then
         error(("Failed to parse repository from GitHub registry: %q"):format(id), 0)
     end
     local name, version = unpack(vim.split(name, "@"))
     local GitHubRegistrySource = require "mason-registry.sources.github"
-    return GitHubRegistrySource:new {
+    return GitHubRegistrySource:new({
         id = id,
         namespace = namespace,
         name = name,
         version = version,
-    }
+    }, system)
 end
 
 ---@param id string
-function LazySource.Lua(id)
+---@param system boolean
+function LazySource.Lua(id, system)
     local LuaRegistrySource = require "mason-registry.sources.lua"
-    return LuaRegistrySource:new {
+    return LuaRegistrySource:new({
         id = id,
         mod = id,
-    }
+    }, system)
 end
 
 ---@param id string
-function LazySource.File(id)
+---@param system boolean
+function LazySource.File(id, system)
     local FileRegistrySource = require "mason-registry.sources.file"
-    return FileRegistrySource:new {
+    return FileRegistrySource:new({
         id = id,
         path = id,
-    }
+    }, system)
 end
 
 function LazySource.Synthesized()
@@ -62,17 +68,20 @@ end
 ---@param type RegistrySourceType
 ---@param id string
 ---@param init fun(id: string): RegistrySource
-function LazySource:new(type, id, init)
+---@param system boolean
+function LazySource:new(type, id, init, system)
+    ---@type LazySource
     local instance = setmetatable({}, self)
     instance.type = type
     instance.id = id
     instance.init = init
+    instance.system = system
     return instance
 end
 
 function LazySource:get()
     if not self.instance then
-        self.instance = self.init(self.id)
+        self.instance = self.init(self.id, self.system)
     end
     return self.instance
 end
@@ -107,43 +116,66 @@ local function split_once_left(str, char)
 end
 
 ---@param registry_id string
-local function parse(registry_id)
+---@param system boolean
+local function parse(registry_id, system)
     local type, id = split_once_left(registry_id, ":")
     assert(id, ("Malformed registry %q"):format(registry_id))
     if type == "github" then
-        return LazySource:new(type, id, LazySource.GitHub)
+        return LazySource:new(type, id, LazySource.GitHub, system)
     elseif type == "lua" then
-        return LazySource:new(type, id, LazySource.Lua)
+        return LazySource:new(type, id, LazySource.Lua, system)
     elseif type == "file" then
-        return LazySource:new(type, id, LazySource.File)
+        return LazySource:new(type, id, LazySource.File, system)
     end
     error(("Unknown registry type: %s"):format(type))
 end
 
 ---@class LazySourceCollection
+---@field state_file string
+---@field system boolean?
 ---@field list LazySource[]
 ---@field synthesized LazySource
+---@field install_channel OneShotChannel?
 local LazySourceCollection = {}
 LazySourceCollection.__index = LazySourceCollection
 
 ---@return LazySourceCollection
-function LazySourceCollection:new()
+---@param state_file string
+---@param system boolean?
+function LazySourceCollection:new(state_file, system)
+    ---@type LazySourceCollection
     local instance = {}
     setmetatable(instance, self)
+    instance.state_file = state_file
+    instance.system = system
     instance.list = {}
     instance.synthesized = LazySource:new("synthesized", "synthesized", LazySource.Synthesized)
     return instance
 end
 
+---@return { checksum: string, timestamp: integer }?
+function LazySourceCollection:get_install_state()
+    local fs = require "mason-core.fs"
+    if fs.sync.file_exists(self.state_file) then
+        local parse_state_file =
+            _.compose(_.evolve { timestamp = tonumber }, _.zip_table { "checksum", "timestamp" }, _.split "\n")
+        return parse_state_file(fs.sync.read_file(self.state_file))
+    end
+end
+
+function LazySourceCollection:get_state_file()
+    return self.state_file
+end
+
 ---@param registry string
 function LazySourceCollection:append(registry)
-    self:unique_insert(parse(registry))
+    self:unique_insert(parse(registry, not not self.system))
     return self
 end
 
 ---@param registry string
 function LazySourceCollection:prepend(registry)
-    self:unique_insert(parse(registry), 1)
+    self:unique_insert(parse(registry, not not self.system), 1)
     return self
 end
 

@@ -47,7 +47,7 @@ function UninstallRunner:execute(opts, callback)
             else
                 try(pkg:unlink(location))
             end
-            fs.sync.rmrf(location:package(pkg.name))
+            fs.sync.rmrf(pkg:get_install_path(location))
             return receipt
         end):get_or_throw()
     end, function(success, result)

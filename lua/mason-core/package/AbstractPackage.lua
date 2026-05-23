@@ -6,6 +6,7 @@ local Result = require "mason-core.result"
 local _ = require "mason-core.functional"
 local fs = require "mason-core.fs"
 local log = require "mason-core.log"
+local path = require "mason-core.path"
 local settings = require "mason.settings"
 local Semaphore = require("mason-core.async.control").Semaphore
 
@@ -128,12 +129,17 @@ end
 ---@return Optional # Optional<InstallReceipt>
 function AbstractPackage:get_receipt(location)
     location = location or InstallLocation.global()
-    local receipt_path = location:receipt(self.name)
+    local receipt_path = self:get_receipt_path(location)
     if fs.sync.file_exists(receipt_path) then
         local receipt = require "mason-core.receipt"
         return Optional.of(receipt.InstallReceipt.from_json(vim.json.decode(fs.sync.read_file(receipt_path))))
     end
     return Optional.empty()
+end
+
+---@param location? InstallLocation
+function AbstractPackage:get_receipt_path(location)
+    return path.concat { self:get_install_path(location), "mason-receipt.json" }
 end
 
 ---@param location? InstallLocation
@@ -172,6 +178,11 @@ function AbstractPackage:get_installed_version(location)
             end
         )
         :or_else(nil)
+end
+
+---@param location? InstallLocation
+function AbstractPackage:get_install_path(location)
+    error "Unimplemented."
 end
 
 ---@param opts? PackageInstallOpts

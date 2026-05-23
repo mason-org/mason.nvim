@@ -76,6 +76,7 @@ Package.License = setmetatable({}, {
 ---@class RegistryPackageSpec
 ---@field schema RegistryPackageSpecSchema
 ---@field name string
+---@field system boolean?
 ---@field description string
 ---@field homepage string
 ---@field licenses string[]
@@ -147,9 +148,19 @@ function Package:uninstall(opts, callback)
 end
 
 ---@param location? InstallLocation
+function Package:get_install_path(location)
+    location = location or InstallLocation.global()
+    if self.spec.system then
+        return location:system_package(self.name)
+    else
+        return location:package(self.name)
+    end
+end
+
+---@param location? InstallLocation
 function Package:is_installed(location)
     location = location or InstallLocation.global()
-    local ok, stat = pcall(vim.loop.fs_stat, location:package(self.name))
+    local ok, stat = pcall(vim.loop.fs_stat, self:get_install_path(location))
     if not ok or not stat then
         return false
     end

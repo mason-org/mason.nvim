@@ -20,12 +20,14 @@ local FileRegistrySource = {}
 FileRegistrySource.__index = FileRegistrySource
 
 ---@param spec FileRegistrySourceSpec
-function FileRegistrySource:new(spec)
+---@param system boolean
+function FileRegistrySource:new(spec, system)
     ---@type FileRegistrySource
     local instance = {}
     setmetatable(instance, self)
     instance.id = spec.id
     instance.spec = spec
+    instance.system = system
     return instance
 end
 

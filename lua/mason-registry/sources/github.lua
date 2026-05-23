@@ -29,7 +29,8 @@ local GitHubRegistrySource = {}
 GitHubRegistrySource.__index = GitHubRegistrySource
 
 ---@param spec GitHubRegistrySourceSpec
-function GitHubRegistrySource:new(spec)
+---@param system boolean
+function GitHubRegistrySource:new(spec, system)
     ---@type GitHubRegistrySource
     local instance = {}
     setmetatable(instance, GitHubRegistrySource)
@@ -39,6 +40,7 @@ function GitHubRegistrySource:new(spec)
     instance.spec = spec
     instance.repo = ("%s/%s"):format(spec.namespace, spec.name)
     instance.root_dir = root_dir
+    instance.system = system
     instance.data_file = path.concat { root_dir, "registry.json" }
     instance.info_file = path.concat { root_dir, "info.json" }
     return instance

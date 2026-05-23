@@ -30,6 +30,10 @@ M.hydrate_package = _.curryN(function(registry, buffer, spec)
         local _ = Package.License[lang]
     end, spec.licenses)
 
+    if registry.system then
+        spec = _.assoc("system", true, spec)
+    end
+
     local existing_instance = buffer[spec.name]
     if existing_instance then
         -- Apply spec to the existing Package instances. This is important as to not have lingering package instances.
