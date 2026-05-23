@@ -76,12 +76,12 @@ describe("InstallRunner ::", function()
             local dummy_handle = InstallHandle:new(dummy, location)
             local runner = InstallRunner:new(dummy_handle, semaphore)
 
-            spy.on(fs.async, "write_file")
+            spy.on(fs.sync, "write_file")
 
             test_helpers.sync_runner_execute(runner, {})
 
             assert.wait(function()
-                assert.spy(fs.async.write_file).was_called_with(location:lockfile(dummy.name), vim.fn.getpid())
+                assert.spy(fs.sync.write_file).was_called_with(location:lockfile(dummy.name), vim.fn.getpid())
             end)
         end)
 
@@ -91,10 +91,10 @@ describe("InstallRunner ::", function()
             local dummy_handle = InstallHandle:new(dummy, location)
             local runner = InstallRunner:new(dummy_handle, semaphore)
 
-            stub(fs.async, "file_exists")
-            stub(fs.async, "read_file")
-            fs.async.file_exists.on_call_with(location:lockfile(dummy.name)).returns(true)
-            fs.async.read_file.on_call_with(location:lockfile(dummy.name)).returns "1337"
+            stub(fs.sync, "file_exists")
+            stub(fs.sync, "read_file")
+            fs.sync.file_exists.on_call_with(location:lockfile(dummy.name)).returns(true)
+            fs.sync.read_file.on_call_with(location:lockfile(dummy.name)).returns "1337"
 
             local callback = test_helpers.sync_runner_execute(runner, {})
 
@@ -113,10 +113,10 @@ describe("InstallRunner ::", function()
             local dummy_handle = InstallHandle:new(dummy, location)
             local runner = InstallRunner:new(dummy_handle, semaphore)
 
-            stub(fs.async, "file_exists")
-            stub(fs.async, "read_file")
-            fs.async.file_exists.on_call_with(location:lockfile(dummy.name)).returns(true)
-            fs.async.read_file.on_call_with(location:lockfile(dummy.name)).returns "1337"
+            stub(fs.sync, "file_exists")
+            stub(fs.sync, "read_file")
+            fs.sync.file_exists.on_call_with(location:lockfile(dummy.name)).returns(true)
+            fs.sync.read_file.on_call_with(location:lockfile(dummy.name)).returns "1337"
 
             local callback = test_helpers.sync_runner_execute(runner, { force = true })
 
