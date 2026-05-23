@@ -189,7 +189,8 @@ function Result.try(fn)
     local thread = coroutine.create(fn)
     local step
     step = function(...)
-        local ok, result = coroutine.resume(thread, ...)
+        local results = { coroutine.resume(thread, ...) }
+        local ok, result = results[1], results[2]
         if not ok then
             return Result.failure(result)
         end
@@ -207,7 +208,7 @@ function Result.try(fn)
             end
         else
             -- yield to parent coroutine
-            return step(coroutine.yield(result))
+            return step(coroutine.yield(result, unpack(results, 3)))
         end
     end
     return step(coroutine.yield)

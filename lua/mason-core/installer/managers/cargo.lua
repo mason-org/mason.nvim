@@ -1,4 +1,5 @@
 local Result = require "mason-core.result"
+local SystemPackage = require "mason-core.system-package"
 local _ = require "mason-core.functional"
 local installer = require "mason-core.installer"
 local log = require "mason-core.log"
@@ -15,6 +16,7 @@ function M.install(crate, version, opts)
     opts = opts or {}
     log.fmt_debug("cargo: install %s %s %s", crate, version, opts)
     local ctx = installer.context()
+    ctx:require(SystemPackage.sfw)
     ctx.stdio_sink:stdout(("Installing crate %s@%s…\n"):format(crate, version))
     return ctx.spawn.cargo {
         "install",
@@ -29,6 +31,7 @@ function M.install(crate, version, opts)
         opts.features and { "--features", opts.features } or vim.NIL,
         opts.locked and "--locked" or vim.NIL,
         crate,
+        firewall = true,
     }
 end
 

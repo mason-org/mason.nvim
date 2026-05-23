@@ -1,4 +1,5 @@
 local Result = require "mason-core.result"
+local SystemPackage = require "mason-core.system-package"
 local _ = require "mason-core.functional"
 local installer = require "mason-core.installer"
 local log = require "mason-core.log"
@@ -62,12 +63,14 @@ function M.install(pkg, version, opts)
     opts = opts or {}
     log.fmt_debug("npm: install %s %s %s", pkg, version, opts)
     local ctx = installer.context()
+    ctx:require(SystemPackage.sfw)
     ctx.stdio_sink:stdout(("Installing npm package %s@%s…\n"):format(pkg, version))
     return ctx.spawn.npm {
         "install",
         ("%s@%s"):format(pkg, version),
         opts.extra_packages or vim.NIL,
         opts.install_extra_args or vim.NIL,
+        firewall = true,
     }
 end
 

@@ -34,6 +34,39 @@ local DEFAULT_SETTINGS = {
         "github:mason-org/mason-registry",
     },
 
+    ---@since 2.3.0
+    -- [Advanced setting]
+    -- The registries to source system packages from. Accepts multiple entries. Should a package with the same name exist in
+    -- multiple registries, the registry listed first will be used.
+    system_registries = {
+        "github:mason-org/mason-system-registry",
+    },
+
+    registry_cache = {
+        ---@since 2.3.0
+        -- [Advanced setting]
+        -- Whether Mason should automatically refresh the registry when needed. If false, the registry will have to be
+        -- updated manually via :MasonUpdate or the :Mason UI.
+        refresh = true,
+
+        ---@since 2.3.0
+        -- Amount of seconds before the local registry cache is considered stale.
+        -- Note that this setting has no effect if refresh is set to false.
+        duration = 24 * 60 * 60, -- 24 hours
+    },
+
+    firewall = {
+        ---@since 2.3.0
+        -- Whether to enable the socket.dev firewall (sfw) for supported package sources.
+        -- For more information, refer to https://socket.dev.
+        enabled = false,
+
+        ---@since 2.3.0
+        -- Whether mason.nvim should automatically install and update the Socket Firewall client.
+        -- If false, the sfw binary must exist in PATH if the firewall is enabled.
+        auto_managed = true,
+    },
+
     ---@since 1.0.0
     -- The provider implementations to use for resolving supplementary package metadata (e.g., all available versions).
     -- Accepts multiple entries, where later entries will be used as fallback should prior providers fail.

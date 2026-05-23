@@ -34,6 +34,7 @@ function InstallLocation:initialize()
             self:bin(),
             self:share(),
             self:package(),
+            self:system_package(),
             self:staging(),
         } do
             if not fs.sync.dir_exists(p) then
@@ -63,6 +64,11 @@ function InstallLocation:package(pkg)
     return Path.concat { self.dir, "packages", pkg }
 end
 
+---@param pkg string?
+function InstallLocation:system_package(pkg)
+    return Path.concat { self.dir, "system_packages", pkg }
+end
+
 ---@param path string?
 function InstallLocation:staging(path)
     return Path.concat { self.dir, "staging", path }
@@ -76,11 +82,6 @@ end
 ---@param path string
 function InstallLocation:registry(path)
     return Path.concat { self.dir, "registries", path }
-end
-
----@param pkg string
-function InstallLocation:receipt(pkg)
-    return Path.concat { self:package(pkg), "mason-receipt.json" }
 end
 
 ---@param opts { PATH: '"append"' | '"prepend"' | '"skip"' }

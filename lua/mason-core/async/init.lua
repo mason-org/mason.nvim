@@ -78,7 +78,8 @@ local function new_execution_context(suspend_fn, callback, ...)
         if cancelled or not thread then
             return
         end
-        local ok, promise_or_result = co.resume(thread, ...)
+        local results = { co.resume(thread, ...) }
+        local ok, promise_or_result = results[1], results[2]
         if cancelled or not thread then
             return
         end
@@ -88,7 +89,7 @@ local function new_execution_context(suspend_fn, callback, ...)
                     promise_or_result(step)
                 else
                     -- yield to parent coroutine
-                    step(coroutine.yield(promise_or_result))
+                    step(coroutine.yield(promise_or_result, unpack(results, 3)))
                 end
             else
                 callback(true, promise_or_result)

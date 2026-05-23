@@ -20,6 +20,7 @@ describe("cargo manager", function()
             vim.NIL, -- features
             vim.NIL, -- locked
             "my-crate",
+            firewall = true,
         }
     end)
 
@@ -53,6 +54,7 @@ describe("cargo manager", function()
             vim.NIL, -- features
             "--locked", -- locked
             "my-crate",
+            firewall = true,
         }
     end)
 
@@ -73,6 +75,7 @@ describe("cargo manager", function()
             { "--features", "lsp,cli" }, -- features
             vim.NIL, -- locked
             "my-crate",
+            firewall = true,
         }
     end)
 
@@ -95,6 +98,7 @@ describe("cargo manager", function()
             vim.NIL, -- features
             vim.NIL, -- locked
             "my-crate",
+            firewall = true,
         }
     end)
 
@@ -118,6 +122,7 @@ describe("cargo manager", function()
             vim.NIL, -- features
             vim.NIL, -- locked
             "my-crate",
+            firewall = true,
         }
     end)
 end)

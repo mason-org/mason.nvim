@@ -22,7 +22,7 @@ end
 
 ---@param cmd string
 function InstallContextSpawn:__index(cmd)
-    ---@param args JobSpawnOpts
+    ---@param args SpawnArgs
     return function(args)
         args.cwd = args.cwd or self.cwd:get()
         args.stdio_sink = args.stdio_sink or self.handle.stdio_sink
@@ -30,7 +30,7 @@ function InstallContextSpawn:__index(cmd)
         local captured_handle
         args.on_spawn = function(handle, stdio, pid, ...)
             captured_handle = handle
-            self.handle:register_spawn_handle(handle, pid, cmd, spawn._flatten_cmd_args(args))
+            self.handle:register_spawn_handle(handle, pid, cmd, spawn._flatten_cmd_args(args), args.firewall == true)
             if on_spawn then
                 on_spawn(handle, stdio, pid, ...)
             end
