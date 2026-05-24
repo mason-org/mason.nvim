@@ -9,7 +9,13 @@ local function make_module(uv)
     ---@param path string
     function M.fstat(path)
         log.trace("fs: fstat", path)
-        local fd = uv.fs_open(path, "r", 438)
+        local ok, fd = pcall(uv.fs_open, path, "r", 438)
+        if ok == false then
+            error(fd)
+        end
+        if fd == nil then
+            error(fd)
+        end
         local fstat = uv.fs_fstat(fd)
         uv.fs_close(fd)
         return fstat
