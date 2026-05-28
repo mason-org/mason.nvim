@@ -66,7 +66,7 @@ The following is the recommended setup when using `lazy.nvim`. It will set up th
 to call `require("mason").setup()` yourself**.
 
 ```lua
-{
+return {
     "mason-org/mason.nvim",
     opts = {}
 }
@@ -192,7 +192,7 @@ require("mason").setup({
 ### Configuration using `lazy.nvim`
 
 ```lua
-{
+return {
     "mason-org/mason.nvim",
     opts = {
         ui = {
