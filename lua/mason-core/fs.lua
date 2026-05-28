@@ -1,5 +1,5 @@
 local Path = require "mason-core.path"
-local a = require "mason-core.async"
+local _ = require "mason-core.functional"
 local log = require "mason-core.log"
 local settings = require "mason.settings"
 
@@ -123,12 +123,16 @@ local function make_module(uv)
     ---@param path string
     function M.mkdirp(path)
         log.debug("fs: mkdirp", path)
-        if vim.in_fast_event() then
-            a.scheduler()
+        local normalized_path = vim.fs.normalize(path)
+        local path_components = vim.split(normalized_path, "/", { plain = true })
+        if vim.fn.has "win32" ~= 1 then
+            path_components[1] = "/"
         end
-        if vim.fn.mkdir(path, "p") ~= 1 then
-            log.debug "fs: mkdirp failed"
-            error(("mkdirp: Could not create directory %q."):format(path))
+        for i = 1, #path_components, 1 do
+            local current_path = vim.fs.joinpath(unpack(_.take(i, path_components)))
+            if not M.dir_exists(current_path) then
+                M.mkdir(current_path)
+            end
         end
     end
 
