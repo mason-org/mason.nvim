@@ -88,7 +88,7 @@ function InstallContextFs:chmod_exec(file_path)
     local GRP_EXEC = 0x8
     local ALL_EXEC = 0x1
     local EXEC = bit.bor(USR_EXEC, GRP_EXEC, ALL_EXEC)
-    local fstat = self:fstat(file_path)
+    local fstat = self:stat(file_path)
     if bit.band(fstat.mode, EXEC) ~= EXEC then
         local plus_exec = bit.bor(fstat.mode, EXEC)
         log.fmt_debug("Setting exec flags on file %s %o -> %o", file_path, fstat.mode, plus_exec)
@@ -100,13 +100,13 @@ end
 ---@param file_path string
 ---@param mode integer
 function InstallContextFs:chmod(file_path, mode)
-    return fs.async.chmod(path.concat { self.cwd:get(), file_path }, mode)
+    return fs.sync.chmod(path.concat { self.cwd:get(), file_path }, mode)
 end
 
 ---@async
 ---@param file_path string
-function InstallContextFs:fstat(file_path)
-    return fs.async.fstat(path.concat { self.cwd:get(), file_path })
+function InstallContextFs:stat(file_path)
+    return fs.sync.stat(path.concat { self.cwd:get(), file_path })
 end
 
 return InstallContextFs
