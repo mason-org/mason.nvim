@@ -51,7 +51,7 @@ end
 ---@async
 ---@param rel_path string The relative path from the current working directory.
 function InstallContextFs:rmrf(rel_path)
-    return fs.async.rmrf(path.concat { self.cwd:get(), rel_path })
+    return fs.sync.rmrf(path.concat { self.cwd:get(), rel_path })
 end
 
 ---@async

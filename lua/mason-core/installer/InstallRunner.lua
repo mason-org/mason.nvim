@@ -78,7 +78,7 @@ function InstallRunner:execute(opts, callback)
         if not opts.debug and not success then
             -- clean up installation dir
             pcall(function()
-                fs.async.rmrf(context.cwd:get())
+                fs.sync.rmrf(context.cwd:get())
             end)
         end
 
