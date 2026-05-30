@@ -36,6 +36,43 @@ local function make_module(uv)
     end
 
     ---@param path string
+    ---@param fn fun(abs_path: string, entry: string, type: "directory" | "file")
+    function M.ls(path, fn)
+        local handle = vim.uv.fs_scandir(path)
+        while handle do
+            local entry, t = vim.uv.fs_scandir_next(handle)
+            if not entry then
+                break
+            end
+
+            ---@type string
+            local abs_path
+            if vim.fn.has "win32" == 1 and path:sub(1, 4) == [[\\?\]] then
+                -- Extended-length paths are used, we cannot use vim.fs.joinpath.
+                abs_path = path .. "\\" .. entry
+            else
+                abs_path = vim.fs.joinpath(path, entry)
+            end
+            t = t or vim.uv.fs_stat(abs_path).type
+
+            if fn(abs_path, entry, t) == false then
+                break
+            end
+        end
+    end
+
+    ---@param path string
+    ---@param fn fun(abs_path: string, entry: string, type: "directory" | "file")
+    function M.walk(path, fn)
+        M.ls(path, function(abs_path, entry, type)
+            if type == "directory" then
+                M.walk(abs_path, fn)
+            end
+            fn(abs_path, entry, type)
+        end)
+    end
+
+    ---@param path string
     function M.rmrf(path)
         assert(
             Path.is_subdirectory(settings.current.install_root_dir, path),
@@ -45,13 +82,30 @@ local function make_module(uv)
             )
         )
         log.debug("fs: rmrf", path)
-        if vim.in_fast_event() then
-            a.scheduler()
+        if vim.fn.has "win32" == 1 then
+            -- Use extended-length path (ELP) on Windows. We have no easy way to check if the current system has
+            -- LongPathsEnabled, so we enforce extended-length paths always.
+            --
+            -- This is currently only done in this function (rmrf) because we walk the entire file tree under `path`,
+            -- which may result in deeply nested file paths that exceed MAX_PATH (260 characters). Other fs operations
+            -- don't reach so deeply into the file tree and pose minimal risk of exceeding the MAX_PATH.
+            -- NOTE: When using the ELP prefix Windows doesn't normalize file paths, meaning path separators (\) need to
+            -- be correct.
+            --
+            -- See https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+            local extended_length_prefix = [[\\?\]]
+            path = extended_length_prefix .. path:gsub("/", "\\")
         end
-        if vim.fn.delete(path, "rf") ~= 0 then
-            log.debug "fs: rmrf failed"
-            error(("rmrf: Could not remove directory %q."):format(path))
-        end
+        M.walk(path, function(abs_path, _, type)
+            if type == "directory" then
+                log.trace("fs: rmdir", abs_path)
+                vim.uv.fs_rmdir(abs_path)
+            else
+                log.trace("fs: unlink", abs_path)
+                vim.uv.fs_unlink(abs_path)
+            end
+        end)
+        M.rmdir(path)
     end
 
     ---@param path string
