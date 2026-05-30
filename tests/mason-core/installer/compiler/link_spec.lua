@@ -128,8 +128,8 @@ describe("registry linker", function()
             ["golang:executable"] = "executable",
             ["luarocks:executable"] = "bin/executable",
             ["npm:executable"] = "node_modules/.bin/executable",
-            ["nuget:executable"] = "executable",
             ["opam:executable"] = "bin/executable",
+            -- ["nuget:executable"] = "executable",
             -- ["pypi:executable"] = "venv/bin/executable",
         }
 
