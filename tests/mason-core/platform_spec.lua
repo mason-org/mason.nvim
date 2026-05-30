@@ -119,6 +119,19 @@ describe("platform", function()
         assert.is_false(platform().is.linux_arm64_gnu)
     end)
 
+    it("should detect Termux as glibc-compatible", function()
+        stub_linux()
+        stub_uname { machine = "aarch64", sysname = "Linux" }
+        -- Termux doesn't have getconf or ldd
+        stub(vim.fn, "executable")
+        vim.fn.executable.on_call_with("ldd").returns(0)
+        vim.fn.executable.on_call_with("getconf").returns(0)
+        -- Set Termux environment variables directly
+        vim.env.TERMUX_VERSION = "0.118.3"
+        vim.env.PREFIX = "/data/data/com.termux/files/usr"
+        assert.is_true(platform().is.linux_arm64_gnu)
+    end)
+
     it("should be able to detect correct triple based on sysname", function()
         stub_linux()
         stub_uname { machine = "aarch64", sysname = "OpenBSD" }
