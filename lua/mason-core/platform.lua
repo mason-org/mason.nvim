@@ -63,8 +63,10 @@ local get_libc = _.lazy(function()
         end
     end
     -- Termux-specific detection (Android/Bionic)
-    if uname.sysname == "Linux" and (vim.env.TERMUX_VERSION or (vim.env.PREFIX and vim.env.PREFIX:find("com.termux"))) then
-        return "glibc"  -- Bionic is glibc-compatible for LSP servers
+    if
+        uname.sysname == "Linux" and (vim.env.TERMUX_VERSION or (vim.env.PREFIX and vim.env.PREFIX:find "com.termux"))
+    then
+        return "glibc" -- Bionic is glibc-compatible for LSP servers
     end
 end)
 
