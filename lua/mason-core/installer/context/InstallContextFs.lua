@@ -76,7 +76,7 @@ end
 ---@async
 ---@param dir_path string
 function InstallContextFs:mkdirp(dir_path)
-    return fs.async.mkdirp(path.concat { self.cwd:get(), dir_path })
+    return fs.sync.mkdirp(path.concat { self.cwd:get(), dir_path })
 end
 
 ---@async

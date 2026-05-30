@@ -122,7 +122,7 @@ local function link(context, link_context, link_fn)
             a.scheduler()
             local dir = vim.fn.fnamemodify(new_abs_path, ":h")
             if not fs.async.dir_exists(dir) then
-                try(Result.pcall(fs.async.mkdirp, dir))
+                try(Result.pcall(fs.sync.mkdirp, dir))
             end
 
             -- 2. Ensure source file exists and target doesn't yet exist OR if --force unlink target if it already

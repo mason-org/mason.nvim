@@ -95,7 +95,7 @@ function GitHubRegistrySource:install()
 
         if not fs.async.dir_exists(self.root_dir) then
             log.debug("Creating registry directory", self)
-            try(Result.pcall(fs.async.mkdirp, self.root_dir))
+            try(Result.pcall(fs.sync.mkdirp, self.root_dir))
         end
 
         if version == nil then

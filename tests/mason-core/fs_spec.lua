@@ -18,4 +18,17 @@ describe("fs", function()
             e
         )
     end)
+
+    it("should mkdirp", function()
+        local temp = vim.fn.tempname()
+        local nested = vim.fs.joinpath(temp, "nested", "directory", "here")
+
+        assert.has_error(function()
+            assert(vim.uv.fs_stat(nested))
+        end)
+
+        fs.sync.mkdirp(nested)
+        local stat = assert(vim.uv.fs_stat(nested), "fs_stat returned no value")
+        assert.equals("directory", stat.type)
+    end)
 end)
