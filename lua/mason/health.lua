@@ -214,6 +214,9 @@ local function check_languages()
         check_thunk { cmd = "julia", args = { "--version" }, name = "julia", relaxed = true },
         function()
             local python = platform.is.win and "python" or "python3"
+            if settings.current.pip.use_python3_host_prog and vim.g.python3_host_prog then
+                python = vim.g.python3_host_prog
+            end
             check { cmd = python, args = { "--version" }, name = "python", relaxed = true }
             check { cmd = python, args = { "-m", "pip", "--version" }, name = "pip", relaxed = true }
             check {
