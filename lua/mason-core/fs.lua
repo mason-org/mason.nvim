@@ -1,5 +1,5 @@
 local Path = require "mason-core.path"
-local a = require "mason-core.async"
+local _ = require "mason-core.functional"
 local log = require "mason-core.log"
 local settings = require "mason.settings"
 
@@ -7,32 +7,66 @@ local function make_module(uv)
     local M = {}
 
     ---@param path string
-    function M.fstat(path)
-        log.trace("fs: fstat", path)
-        local fd = uv.fs_open(path, "r", 438)
-        local fstat = uv.fs_fstat(fd)
-        uv.fs_close(fd)
-        return fstat
+    function M.stat(path)
+        log.trace("fs: stat", path)
+        return assert(uv.fs_stat(path))
     end
 
     ---@param path string
     function M.file_exists(path)
         log.trace("fs: file_exists", path)
-        local ok, fstat = pcall(M.fstat, path)
+        local ok, stat = pcall(M.stat, path)
         if not ok then
             return false
         end
-        return fstat.type == "file"
+        return stat.type == "file"
     end
 
     ---@param path string
     function M.dir_exists(path)
         log.trace("fs: dir_exists", path)
-        local ok, fstat = pcall(M.fstat, path)
+        local ok, stat = pcall(M.stat, path)
         if not ok then
             return false
         end
-        return fstat.type == "directory"
+        return stat.type == "directory"
+    end
+
+    ---@param path string
+    ---@param fn fun(abs_path: string, entry: string, type: "directory" | "file")
+    function M.ls(path, fn)
+        local handle = vim.uv.fs_scandir(path)
+        while handle do
+            local entry, t = vim.uv.fs_scandir_next(handle)
+            if not entry then
+                break
+            end
+
+            ---@type string
+            local abs_path
+            if vim.fn.has "win32" == 1 and path:sub(1, 4) == [[\\?\]] then
+                -- Extended-length paths are used, we cannot use vim.fs.joinpath.
+                abs_path = path .. "\\" .. entry
+            else
+                abs_path = vim.fs.joinpath(path, entry)
+            end
+            t = t or vim.uv.fs_stat(abs_path).type
+
+            if fn(abs_path, entry, t) == false then
+                break
+            end
+        end
+    end
+
+    ---@param path string
+    ---@param fn fun(abs_path: string, entry: string, type: "directory" | "file")
+    function M.walk(path, fn)
+        M.ls(path, function(abs_path, entry, type)
+            if type == "directory" then
+                M.walk(abs_path, fn)
+            end
+            fn(abs_path, entry, type)
+        end)
     end
 
     ---@param path string
@@ -45,13 +79,30 @@ local function make_module(uv)
             )
         )
         log.debug("fs: rmrf", path)
-        if vim.in_fast_event() then
-            a.scheduler()
+        if vim.fn.has "win32" == 1 then
+            -- Use extended-length path (ELP) on Windows. We have no easy way to check if the current system has
+            -- LongPathsEnabled, so we enforce extended-length paths always.
+            --
+            -- This is currently only done in this function (rmrf) because we walk the entire file tree under `path`,
+            -- which may result in deeply nested file paths that exceed MAX_PATH (260 characters). Other fs operations
+            -- don't reach so deeply into the file tree and pose minimal risk of exceeding the MAX_PATH.
+            -- NOTE: When using the ELP prefix Windows doesn't normalize file paths, meaning path separators (\) need to
+            -- be correct.
+            --
+            -- See https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+            local extended_length_prefix = [[\\?\]]
+            path = extended_length_prefix .. path:gsub("/", "\\")
         end
-        if vim.fn.delete(path, "rf") ~= 0 then
-            log.debug "fs: rmrf failed"
-            error(("rmrf: Could not remove directory %q."):format(path))
-        end
+        M.walk(path, function(abs_path, _, type)
+            if type == "directory" then
+                log.trace("fs: rmdir", abs_path)
+                vim.uv.fs_rmdir(abs_path)
+            else
+                log.trace("fs: unlink", abs_path)
+                vim.uv.fs_unlink(abs_path)
+            end
+        end)
+        M.rmdir(path)
     end
 
     ---@param path string
@@ -69,12 +120,16 @@ local function make_module(uv)
     ---@param path string
     function M.mkdirp(path)
         log.debug("fs: mkdirp", path)
-        if vim.in_fast_event() then
-            a.scheduler()
+        local normalized_path = vim.fs.normalize(path)
+        local path_components = vim.split(normalized_path, "/", { plain = true })
+        if vim.fn.has "win32" ~= 1 then
+            path_components[1] = "/"
         end
-        if vim.fn.mkdir(path, "p") ~= 1 then
-            log.debug "fs: mkdirp failed"
-            error(("mkdirp: Could not create directory %q."):format(path))
+        for i = 1, #path_components, 1 do
+            local current_path = vim.fs.joinpath(unpack(_.take(i, path_components)))
+            if not M.dir_exists(current_path) then
+                M.mkdir(current_path)
+            end
         end
     end
 
@@ -130,33 +185,13 @@ local function make_module(uv)
     ---@param path string: The full path to the directory to read.
     ---@return ReaddirEntry[]
     function M.readdir(path)
-        log.trace("fs: fs_opendir", path)
-        local dir = assert(vim.loop.fs_opendir(path, nil, 25))
         local all_entries = {}
-        local exhausted = false
-
-        repeat
-            local entries = uv.fs_readdir(dir)
-            log.trace("fs: fs_readdir", path, entries)
-            if entries and #entries > 0 then
-                for i = 1, #entries do
-                    if entries[i].name and not entries[i].type then
-                        -- See https://github.com/luvit/luv/issues/660
-                        local full_path = Path.concat { path, entries[i].name }
-                        log.trace("fs: fs_readdir falling back to fs_stat to find type", full_path)
-                        local stat = uv.fs_stat(full_path)
-                        entries[i].type = stat.type
-                    end
-                    all_entries[#all_entries + 1] = entries[i]
-                end
-            else
-                log.trace("fs: fs_readdir exhausted scan", path)
-                exhausted = true
-            end
-        until exhausted
-
-        uv.fs_closedir(dir)
-
+        M.ls(path, function(_, entry, type)
+            all_entries[#all_entries + 1] = {
+                name = entry,
+                type = type,
+            }
+        end)
         return all_entries
     end
 

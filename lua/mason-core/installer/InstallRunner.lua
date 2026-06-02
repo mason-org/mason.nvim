@@ -84,7 +84,7 @@ function InstallRunner:execute(opts, callback)
         if not opts.debug and not success then
             -- clean up installation dir
             local ok, err = pcall(function()
-                fs.async.rmrf(context.cwd:get())
+                fs.sync.rmrf(context.cwd:get())
             end)
             if not ok then
                 context.stdio_sink:stderr "Failed to clean up installation directory: "

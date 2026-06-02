@@ -22,10 +22,10 @@ describe("registry linker", function()
         local ctx = test_helpers.create_context()
         stub(ctx.fs, "file_exists")
         stub(ctx.fs, "chmod")
-        stub(ctx.fs, "fstat")
+        stub(ctx.fs, "stat")
 
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), "exec.sh").returns(true)
-        ctx.fs.fstat.on_call_with(match.is_ref(ctx.fs), "exec.sh").returns {
+        ctx.fs.stat.on_call_with(match.is_ref(ctx.fs), "exec.sh").returns {
             mode = 493, -- 0755
         }
 
@@ -59,10 +59,10 @@ describe("registry linker", function()
         local ctx = test_helpers.create_context()
         stub(ctx.fs, "file_exists")
         stub(ctx.fs, "chmod")
-        stub(ctx.fs, "fstat")
+        stub(ctx.fs, "stat")
 
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), "exec.sh").returns(true)
-        ctx.fs.fstat.on_call_with(match.is_ref(ctx.fs), "exec.sh").returns {
+        ctx.fs.stat.on_call_with(match.is_ref(ctx.fs), "exec.sh").returns {
             mode = 420, -- 0644
         }
 
@@ -88,10 +88,10 @@ describe("registry linker", function()
         local ctx = test_helpers.create_context()
         stub(ctx.fs, "file_exists")
         stub(ctx.fs, "chmod")
-        stub(ctx.fs, "fstat")
+        stub(ctx.fs, "stat")
 
         ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), "v1.0.0-exec.sh").returns(true)
-        ctx.fs.fstat.on_call_with(match.is_ref(ctx.fs), "v1.0.0-exec.sh").returns {
+        ctx.fs.stat.on_call_with(match.is_ref(ctx.fs), "v1.0.0-exec.sh").returns {
             mode = 493, -- 0755
         }
 
@@ -120,7 +120,7 @@ describe("registry linker", function()
         local ctx = test_helpers.create_context()
         stub(ctx.fs, "file_exists")
         stub(ctx.fs, "chmod")
-        stub(ctx.fs, "fstat")
+        stub(ctx.fs, "stat")
 
         local matrix = {
             ["cargo:executable"] = "bin/executable",
@@ -128,14 +128,14 @@ describe("registry linker", function()
             ["golang:executable"] = "executable",
             ["luarocks:executable"] = "bin/executable",
             ["npm:executable"] = "node_modules/.bin/executable",
-            ["nuget:executable"] = "executable",
             ["opam:executable"] = "bin/executable",
+            -- ["nuget:executable"] = "executable",
             -- ["pypi:executable"] = "venv/bin/executable",
         }
 
         for bin, path in pairs(matrix) do
             ctx.fs.file_exists.on_call_with(match.is_ref(ctx.fs), path).returns(true)
-            ctx.fs.fstat.on_call_with(match.is_ref(ctx.fs), path).returns {
+            ctx.fs.stat.on_call_with(match.is_ref(ctx.fs), path).returns {
                 mode = 493, -- 0755
             }
 

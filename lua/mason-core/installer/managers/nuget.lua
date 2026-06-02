@@ -30,7 +30,13 @@ function M.bin_path(bin)
             return bin
         end,
         win = function()
-            return ("%s.exe"):format(bin)
+            local ctx = installer.context()
+            local shim = ("%s.cmd"):format(bin)
+            if ctx.fs:file_exists(shim) then
+                return shim
+            else
+                return ("%s.exe"):format(bin)
+            end
         end,
     })
 end

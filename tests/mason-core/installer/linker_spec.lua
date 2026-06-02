@@ -110,7 +110,7 @@ describe("linker", function()
     it("should symlink share files", function()
         local ctx = test_helpers.create_context()
 
-        stub(fs.async, "mkdirp")
+        stub(fs.sync, "mkdirp")
         stub(fs.async, "dir_exists")
         stub(fs.async, "file_exists")
         stub(fs.async, "symlink")
@@ -142,8 +142,8 @@ describe("linker", function()
             .spy(fs.async.symlink)
             .was_called_with("../../../packages/dummy/nested/path/to/share-file", ctx.location:share "nested/path/share-file")
 
-        assert.spy(fs.async.mkdirp).was_called(2)
-        assert.spy(fs.async.mkdirp).was_called_with(ctx.location:share "nested/path")
+        assert.spy(fs.sync.mkdirp).was_called(2)
+        assert.spy(fs.sync.mkdirp).was_called_with(ctx.location:share "nested/path")
     end)
 
     it("should copy share files on Windows", function()
@@ -155,7 +155,7 @@ describe("linker", function()
         platform.is.unix = false
         platform.is.win = true
 
-        stub(fs.async, "mkdirp")
+        stub(fs.sync, "mkdirp")
         stub(fs.async, "dir_exists")
         stub(fs.async, "file_exists")
         stub(fs.async, "copy_file")
@@ -189,7 +189,7 @@ describe("linker", function()
             { excl = true }
         )
 
-        assert.spy(fs.async.mkdirp).was_called(2)
-        assert.spy(fs.async.mkdirp).was_called_with(ctx.location:share "nested/path")
+        assert.spy(fs.sync.mkdirp).was_called(2)
+        assert.spy(fs.sync.mkdirp).was_called_with(ctx.location:share "nested/path")
     end)
 end)
