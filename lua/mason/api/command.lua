@@ -11,6 +11,14 @@ vim.api.nvim_create_user_command("Mason", Mason, {
     nargs = 0,
 })
 
+-- TODO: These are apparently deprecated. Find some alternative.
+local write_stdout = vim.api.nvim_out_write
+local writeln_stdout = function(msg)
+    vim.api.nvim_echo({ { msg } }, true, {})
+end
+local write_stderr = vim.api.nvim_err_write
+local writeln_stderr = vim.api.nvim_err_writeln
+
 local get_valid_packages = _.filter_map(function(pkg_specifier)
     local Optional = require "mason-core.optional"
     local notify = require "mason-core.notify"
@@ -78,8 +86,8 @@ local function MasonInstall(package_specifiers, opts)
                                 end)
                                 if not opts.quiet then
                                     handle
-                                        :on("stdout", vim.schedule_wrap(vim.api.nvim_out_write))
-                                        :on("stderr", vim.schedule_wrap(vim.api.nvim_err_write))
+                                        :on("stdout", vim.schedule_wrap(write_stdout))
+                                        :on("stderr", vim.schedule_wrap(write_stderr))
                                 end
                             end)
                         end
@@ -95,8 +103,8 @@ local function MasonInstall(package_specifiers, opts)
                 local failed_packages = _.map(_.nth(2), failures)
                 for _, failure in ipairs(failures) do
                     local _, pkg, error = unpack(failure)
-                    vim.api.nvim_err_writeln(("Package %s failed with the following error:"):format(pkg.name))
-                    vim.api.nvim_err_writeln(tostring(error))
+                    write_stderr(("Package %s failed with the following error:"):format(pkg.name))
+                    write_stderr(tostring(error))
                 end
                 vim.cmd [[1cq]]
             end
@@ -279,17 +287,21 @@ local function MasonLock(subcommand)
 
     if subcommand == "generate" then
         if lock.has_lockfile() then
-            local answer =
-                vim.fn.confirm("Lockfile already exists, are you sure you want to generate a new one?", "&Yes\n&No", 2)
-            if answer ~= 1 then
-                return
+            if not platform.is_headless then
+                local answer = vim.fn.confirm(
+                    "Lockfile already exists, are you sure you want to generate a new one?",
+                    "&Yes\n&No",
+                    2
+                )
+                if answer ~= 1 then
+                    return
+                end
             end
         end
         lock.write_lockfile(lock.generate_lockfile())
         notify("Successfully generated lockfile at " .. settings.current.lockfile.path)
     elseif subcommand == "restore" then
-        require("mason-core.lock.ui").restore()
-        require("mason-core.lock.ui").open()
+        require("mason.api.command.restore").run()
     else
         require("mason-core.lock.ui").open()
     end

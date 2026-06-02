@@ -145,6 +145,39 @@ function M.has_lockfile()
     return fs.sync.file_exists(settings.current.lockfile.path)
 end
 
+---@param handlers LockfileInstallHandlers
+---@param callback fun(success: boolean, error: { unavailable_packages: string[], failed: Package[] })
+function M.restore(handlers, callback)
+    local LockfileRestore = require "mason-core.lock.restore"
+    local a = require "mason-core.async"
+    local lockfile = M.get_lockfile()
+    if not lockfile then
+        pcall(callback, false, "No lockfile was found.")
+        return
+    end
+    local restore = LockfileRestore:new(lockfile)
+    a.run(function()
+        local group = restore:prepare()
+        group:install(handlers)
+        restore:cleanup()
+        return group
+    end, function(success, result)
+        if not success then
+            callback(success, result)
+        end
+        ---@type LockfileInstallGroup
+        local group = result
+        if _.size(group.unavailable_packages) > 0 or #group.installed.failed > 0 then
+            callback(false, {
+                unavailable_packages = _.keys(group.unavailable_packages),
+                failed = group.installed.failed,
+            })
+        else
+            callback(success, result)
+        end
+    end)
+end
+
 local has_init = false
 function M.init()
     if has_init then

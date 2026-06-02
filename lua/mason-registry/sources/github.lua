@@ -89,6 +89,7 @@ end
 function GitHubRegistrySource:install(opts)
     local zzlib = require "mason-vendor.zzlib"
     opts = opts or {}
+    log.debug("Installing registry", self, opts)
 
     return Result.try(function(try)
         local version = self.spec.version
@@ -145,21 +146,21 @@ function GitHubRegistrySource:install(opts)
             }
         ))
 
-        if opts.checksum then
-            local upstream_checksum = checksums["registry.json"]
-            if opts.checksum ~= upstream_checksum then
+        local installed_checksum = self:get_installed_sha256sum():get_or_nil()
+
+        if installed_checksum then
+            if installed_checksum ~= checksums["registry.json"] then
                 return Result.failure(
-                    ("Failed to validate upstream registry checksum. Received: %s, expected: %s."):format(
-                        upstream_checksum,
-                        opts.checksum
+                    ("Registry checksum failed validation. Received: sha256:%s, expected: sha256:%s."):format(
+                        installed_checksum,
+                        checksums["registry.json"]
                     )
                 )
             end
 
-            local installed_checksum = self:get_installed_sha256sum():get_or_nil()
-            if installed_checksum and installed_checksum ~= opts.checksum then
+            if opts.checksum and installed_checksum ~= opts.checksum then
                 return Result.failure(
-                    ("Failed to validate checksum of registry. Received: %s, expected: %s."):format(
+                    ("Registry checksum had unexpected value. Received: sha256:%s, expected: sha256:%s."):format(
                         installed_checksum,
                         opts.checksum
                     )
@@ -168,6 +169,7 @@ function GitHubRegistrySource:install(opts)
         end
     end)
         :on_success(function()
+            log.debug("Successfully installed registry", self, opts)
             self:reload()
         end)
         :on_failure(function(err)
@@ -195,7 +197,7 @@ function GitHubRegistrySource:get_installed_sha256sum()
     return Result.try(function(try)
         local b = try(spawn.sha256sum { self.data_file })
         local checksum = _.split("%s+", b.stdout)[1]
-        return checksum
+        return _.trim(checksum)
     end)
 end
 

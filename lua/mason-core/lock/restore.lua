@@ -48,6 +48,8 @@ local providers = {
 ---@class LockfileInstallGroup
 ---@field packages table<Package, LockfilePackage>
 ---@field unavailable_packages table<string, { error: string, metadata: LockfilePackage }>
+---@field handles table<Package, InstallHandle>
+---@field installed { completed: Package[], failed: Package[] }
 local LockfileInstallGroup = {}
 LockfileInstallGroup.__index = LockfileInstallGroup
 
@@ -67,10 +69,13 @@ function LockfileInstallGroup:new(packages, unavailable_packages)
     return instance
 end
 
+---@alias LockfileInstallHandlers { on_install?: fun(pkg: Package, metadata: LockfilePackage), on_handle?: fun(handle: InstallHandle), on_completion?: fun(pkg: Package, success: boolean, result: any) }
+
 ---@async
----@param handlers { on_handle: fun(handle: InstallHandle), on_completion: fun(pkg: Package, success: boolean, result: any) }
-function LockfileInstallGroup:install(handlers, callback)
+---@param handlers LockfileInstallHandlers
+function LockfileInstallGroup:install(handlers)
     local thunks = {}
+    ---@type Package[]
     local sorted_packages = _.sort_by(_.prop "name", _.keys(self.packages))
     for __, pkg in ipairs(sorted_packages) do
         table.insert(thunks, function()
@@ -92,6 +97,9 @@ function LockfileInstallGroup:install(handlers, callback)
                 end)
                 if handlers and handlers.on_handle then
                     handlers.on_handle(self.handles[pkg])
+                end
+                if handlers and handlers.on_install then
+                    handlers.on_install(pkg, metadata)
                 end
             end)
         end)

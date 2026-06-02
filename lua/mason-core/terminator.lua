@@ -91,11 +91,13 @@ function M.terminate(grace_ms)
         -- 3. Schedule error message to be displayed so that Neovim prints it to the tty.
         --    XXX: does this need to be conditional on which UIs are attached?
         vim.schedule(function()
-            vim.api.nvim_err_writeln(
-                ("[mason.nvim] Neovim exited while the following packages were installing. Installation was aborted.\n- %s"):format(
-                    table.concat(package_names, #package_names > 5 and ", " or "\n- ")
-                )
-            )
+            vim.api.nvim_echo({
+                {
+                    ("[mason.nvim] Neovim exited while the following packages were installing. Installation was aborted.\n- %s"):format(
+                        table.concat(package_names, #package_names > 5 and ", " or "\n- ")
+                    ),
+                },
+            }, true, { err = true })
         end)
     end
 end
