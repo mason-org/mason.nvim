@@ -7,20 +7,20 @@ local settings = require "mason.settings"
 local M = {}
 
 ---@class LockfileHeader
----@field version '"1"'
+---@field version "1"
 
 ---@class LockfileRegistryGitHub
----@field proto '"github"'
+---@field proto "github"
 ---@field integrity string
 ---@field namespace string
 ---@field name string
 
 ---@class LockfileRegistryFile
----@field proto '"file"'
+---@field proto "file"
 ---@field path string
 
 ---@class LockfileRegistryLua
----@field proto '"lua"'
+---@field proto "lua"
 ---@field mod string
 
 ---@alias LockfileRegistry LockfileRegistryGitHub | LockfileRegistryFile | LockfileRegistryLua

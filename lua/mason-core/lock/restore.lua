@@ -157,7 +157,12 @@ function LockfileRestore:resolve_package(pkg_name, metadata)
     return Result.try(function(try)
         local ephemeral_registry = self:get_registry(metadata.registry)
         if not ephemeral_registry:is_installed() then
-            try(ephemeral_registry:install())
+            if metadata.registry.proto == "github" then
+                local _, checksum = unpack(_.split("~", metadata.registry.integrity))
+                try(ephemeral_registry:install { checksum = checksum })
+            else
+                try(ephemeral_registry:install())
+            end
         end
         return Optional.of_nilable(ephemeral_registry:get_package(pkg_name)):ok_or "Unable to find package."
     end)
@@ -189,19 +194,5 @@ function LockfileRestore:cleanup()
         end
     end
 end
---
--- require("mason-core.async").run_blocking(function()
---     local registry = require "mason-registry"
---     for _, pkg in ipairs(registry.get_all_packages()) do
---         pkg:get_install_handle():if_present(function(handle)
---             if not handle:is_closing() then
---                 handle:terminate()
---             end
---         end)
---     end
---     local restore = LockfileRestore:new(require("mason-core.lock").get_lockfile())
---     require("mason-core.lock.ui").open()
---     require("mason-core.lock.ui").init(restore:prepare())
--- end)
 
 return LockfileRestore

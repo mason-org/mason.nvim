@@ -1,43 +1,57 @@
----@class Failure
----@field error any
+---@generic T
+---@class Failure<T>
+---@field error T
 local Failure = {}
 Failure.__index = Failure
 
+---@param error T
 function Failure:new(error)
-    ---@type Failure
+    ---@type Failure<T>
     local instance = {}
     setmetatable(instance, self)
     instance.error = error
     return instance
 end
 
----@class Result
----@field value any
+---@generic T, E
+---@class Result<T, E = any>
+---@field value T | Failure<E>
 local Result = {}
 Result.__index = Result
 
+---@param value T
 function Result:new(value)
-    ---@type Result
+    ---@type Result<T>
     local instance = {}
     setmetatable(instance, self)
     instance.value = value
     return instance
 end
 
+---@generic U
+---@param value U
+---@return Result<U>
 function Result.success(value)
     return Result:new(value)
 end
 
+---@generic U
+---@param error U
+---@return Result<T, U>
 function Result.failure(error)
     return Result:new(Failure:new(error))
 end
 
+---@return T?
 function Result:get_or_nil()
     if self:is_success() then
         return self.value
     end
 end
 
+---@generic V
+---@param value V
+---@return T | V
 function Result:get_or_else(value)
     if self:is_success() then
         return self.value
@@ -47,6 +61,7 @@ function Result:get_or_else(value)
 end
 
 ---@param exception any? The exception to throw if the result is a failure.
+---@return T
 function Result:get_or_throw(exception)
     if self:is_success() then
         return self.value
@@ -59,6 +74,7 @@ function Result:get_or_throw(exception)
     end
 end
 
+---@return E?
 function Result:err_or_nil()
     if self:is_failure() then
         return self.value.error
@@ -73,7 +89,9 @@ function Result:is_success()
     return getmetatable(self.value) ~= Failure
 end
 
----@param mapper_fn fun(value: any): any
+---@generic U
+---@param mapper_fn fun(value: T): U
+---@return Result<U>
 function Result:map(mapper_fn)
     if self:is_success() then
         return Result.success(mapper_fn(self.value))
@@ -82,7 +100,9 @@ function Result:map(mapper_fn)
     end
 end
 
----@param mapper_fn fun(value: any): any
+---@generic U
+---@param mapper_fn fun(error: E): U
+---@return Result<T, U>
 function Result:map_err(mapper_fn)
     if self:is_failure() then
         return Result.failure(mapper_fn(self.value.error))
@@ -91,7 +111,9 @@ function Result:map_err(mapper_fn)
     end
 end
 
----@param mapper_fn fun(value: any): any
+---@generic U
+---@param mapper_fn fun(value: T): U
+---@return Result<U>
 function Result:map_catching(mapper_fn)
     if self:is_success() then
         local ok, result = pcall(mapper_fn, self.value)
@@ -105,7 +127,9 @@ function Result:map_catching(mapper_fn)
     end
 end
 
----@param recover_fn fun(value: any): any
+---@generic U
+---@param recover_fn fun(err: E): U
+---@return Result<T | U, E>
 function Result:recover(recover_fn)
     if self:is_failure() then
         return Result.success(recover_fn(self:err_or_nil()))
@@ -114,7 +138,9 @@ function Result:recover(recover_fn)
     end
 end
 
----@param recover_fn fun(value: any): any
+---@generic U
+---@param recover_fn fun(err: E): U
+---@return Result<T | U, E>
 function Result:recover_catching(recover_fn)
     if self:is_failure() then
         local ok, value = pcall(recover_fn, self:err_or_nil())
@@ -128,7 +154,7 @@ function Result:recover_catching(recover_fn)
     end
 end
 
----@param fn fun(value: any): any
+---@param fn fun(err: E)
 function Result:on_failure(fn)
     if self:is_failure() then
         fn(self.value.error)
@@ -136,7 +162,7 @@ function Result:on_failure(fn)
     return self
 end
 
----@param fn fun(value: any): any
+---@param fn fun(value: T)
 function Result:on_success(fn)
     if self:is_success() then
         fn(self.value)
@@ -153,7 +179,9 @@ function Result:ok()
     end
 end
 
----@param fn fun(value: any): Result
+---@generic U
+---@param fn fun(value: T): Result<U, E>
+---@return Result<T | U, E>
 function Result:and_then(fn)
     if self:is_success() then
         return fn(self.value)
@@ -162,7 +190,8 @@ function Result:and_then(fn)
     end
 end
 
----@param fn fun(err: any): Result
+---@generic U
+---@param fn fun(err: E): Result<T, U>
 function Result:or_else(fn)
     if self:is_failure() then
         return fn(self:err_or_nil())
@@ -171,8 +200,9 @@ function Result:or_else(fn)
     end
 end
 
----@param fn fun(): any
----@return Result
+---@generic U
+---@param fn fun(): U
+---@return Result<U>
 function Result.run_catching(fn)
     local ok, result = pcall(fn)
     if ok then
@@ -182,9 +212,9 @@ function Result.run_catching(fn)
     end
 end
 
----@generic T
----@param fn fun(try: fun(result: Result)): T?
----@return Result # Result<T>
+---@generic T, U
+---@param fn fun(try: fun(result: Result<T>): T): U
+---@return Result<U>
 function Result.try(fn)
     local thread = coroutine.create(fn)
     local step
@@ -214,6 +244,9 @@ function Result.try(fn)
     return step(coroutine.yield)
 end
 
+---@generic U
+---@param fn fun(...: any): U
+---@return Result<U>
 function Result.pcall(fn, ...)
     local ok, res = pcall(fn, ...)
     if ok then

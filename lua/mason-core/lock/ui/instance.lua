@@ -5,6 +5,7 @@ local a = require "mason-core.async"
 local display = require "mason-core.ui.display"
 local lock = require "mason-core.lock"
 local log = require "mason-core.log"
+local notify = require "mason-core.notify"
 local p = require "mason.ui.palette"
 local registry = require "mason-registry"
 local settings = require "mason.settings"
@@ -243,7 +244,7 @@ window.view(
                                     {
                                         p.none "Press ",
                                         p.highlight "C",
-                                        p.none " to include all of your currently installed packages in the lockfile.",
+                                        p.none " to populate the lockfile with the currently installed packages.",
                                     },
                                 },
                                 Ui.Keybind("C", "CREATE_LOCKFILE", nil, true),
@@ -502,6 +503,7 @@ end
 
 local function create_lockfile()
     lock.create_lockfile()
+    notify(("Successfully created lockfile at %s."):format(lock.get_lockfile_path()))
     init()
 end
 

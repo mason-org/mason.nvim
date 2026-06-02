@@ -8,7 +8,7 @@ local settings = require "mason.settings"
 
 local is_not_nil = _.complement(_.equals(vim.NIL))
 
----@alias JobSpawn table<string, async fun(opts: SpawnArgs): Result>
+---@alias JobSpawn table<string, async fun(opts: SpawnArgs): Result<SpawnSuccess, SpawnError>>
 ---@type JobSpawn
 local spawn = {
     _flatten_cmd_args = _.compose(_.filter(is_not_nil), _.flatten),
@@ -42,6 +42,11 @@ local function exepath(cmd, path)
     end
 end
 
+---@alias SpawnSuccess { stdout: string, stderr: string }
+---@alias SpawnError { exit_code?: integer, signal?: integer, stdout?: string, stderr?: string }
+
+---@param err SpawnError
+---@param cmd string
 local function Failure(err, cmd)
     return Result.failure(setmetatable(err, {
         __tostring = function()

@@ -7,9 +7,10 @@ local log = require "mason-core.log"
 local path = require "mason-core.path"
 local providers = require "mason-core.providers"
 local settings = require "mason.settings"
+local spawn = require "mason-core.spawn"
 local util = require "mason-registry.sources.util"
 
--- Parse sha256sum text output to a table<filename: string, sha256sum: string> structure
+---@type fun(checksums: string): { filename: string, sha256sum: string }[]
 local parse_checksums = _.compose(_.from_pairs, _.map(_.compose(_.reverse, _.split "  ")), _.split "\n", _.trim)
 
 ---@class GitHubRegistrySourceSpec
@@ -84,8 +85,10 @@ function GitHubRegistrySource:get_all_package_names()
 end
 
 ---@async
-function GitHubRegistrySource:install()
+---@param opts { checksum?: string }
+function GitHubRegistrySource:install(opts)
     local zzlib = require "mason-vendor.zzlib"
+    opts = opts or {}
 
     return Result.try(function(try)
         local version = self.spec.version
@@ -94,7 +97,7 @@ function GitHubRegistrySource:install()
             return
         end
 
-        if not fs.async.dir_exists(self.root_dir) then
+        if not fs.sync.dir_exists(self.root_dir) then
             log.debug("Creating registry directory", self)
             try(Result.pcall(fs.sync.mkdirp, self.root_dir))
         end
@@ -121,30 +124,55 @@ function GitHubRegistrySource:install()
                 :on_failure(_.partial(log.error, "Failed to unpack registry archive."))
                 :map_err(_.always "Failed to unpack registry archive.")
         )
-        pcall(fs.async.unlink, zip_file)
+        pcall(fs.sync.unlink, zip_file)
 
-        local checksums = try(
+        local checksums_txt = try(
             fetch(settings.current.github.download_url_template:format(self.repo, version, "checksums.txt")):map_err(
                 _.always "Failed to download checksums.txt."
             )
         )
+
+        local checksums = parse_checksums(checksums_txt)
 
         try(Result.pcall(fs.async.write_file, self.data_file, registry_contents))
         try(Result.pcall(
             fs.async.write_file,
             self.info_file,
             vim.json.encode {
-                checksums = parse_checksums(checksums),
+                checksums = checksums,
                 version = version,
                 download_timestamp = os.time(),
             }
         ))
+
+        if opts.checksum then
+            local upstream_checksum = checksums["registry.json"]
+            if opts.checksum ~= upstream_checksum then
+                return Result.failure(
+                    ("Failed to validate upstream registry checksum. Received: %s, expected: %s."):format(
+                        upstream_checksum,
+                        opts.checksum
+                    )
+                )
+            end
+
+            local installed_checksum = self:get_installed_sha256sum():get_or_nil()
+            if installed_checksum and installed_checksum ~= opts.checksum then
+                return Result.failure(
+                    ("Failed to validate checksum of registry. Received: %s, expected: %s."):format(
+                        installed_checksum,
+                        opts.checksum
+                    )
+                )
+            end
+        end
     end)
         :on_success(function()
             self:reload()
         end)
         :on_failure(function(err)
             log.fmt_error("Failed to install registry %s. %s", self, err)
+            self:uninstall()
         end)
 end
 
@@ -156,6 +184,19 @@ function GitHubRegistrySource:uninstall()
         fs.sync.unlink(self.info_file)
         fs.sync.unlink(self.data_file)
     end
+end
+
+---@async
+---@return Result<string>
+function GitHubRegistrySource:get_installed_sha256sum()
+    if not fs.sync.file_exists(self.data_file) then
+        return Result.failure "Data file doesn't exist."
+    end
+    return Result.try(function(try)
+        local b = try(spawn.sha256sum { self.data_file })
+        local checksum = _.split("%s+", b.stdout)[1]
+        return checksum
+    end)
 end
 
 ---@return { checksums: table<string, string>, version: string, download_timestamp: integer }
