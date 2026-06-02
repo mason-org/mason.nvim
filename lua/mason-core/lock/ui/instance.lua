@@ -24,7 +24,7 @@ local INITIAL_STATE = {
     restore = {
         ---@type string?
         expanded_log = nil,
-        ---@type nil | '"PREPARING"' | '"RUNNING"' | '"FINISHED"'
+        ---@type nil | "PREPARING" | "RUNNING" | "FINISHED"
         state = nil,
         ---@type LockfileRestore?
         instance = nil,

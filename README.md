@@ -29,6 +29,7 @@
 -   [Registries](#registries)
 -   [Screenshots](#screenshots)
 -   [Firewall (socket.dev)](#firewall-socketdev)
+-   [Lockfile](#lockfile)
 -   [Configuration](#configuration)
 
 ## Introduction
@@ -167,6 +168,10 @@ For more information refer to the [Socket.dev](https://socket.dev/) documentatio
 > [!NOTE]
 > If you already use the Socket.dev firewall in a proxy service configuration you don't need to enable the firewall in
 > `mason.nvim`.
+
+## Lockfile
+
+
 
 ## Configuration
 
