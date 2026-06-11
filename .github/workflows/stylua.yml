@@ -10,12 +10,12 @@ jobs:
     stylua:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
             - name: Run Stylua check
-              uses: JohnnyMorganz/stylua-action@v1.1.1
+              uses: JohnnyMorganz/stylua-action@v5
               with:
                   # token is needed because the action allegedly downloads binary from github releases
                   token: ${{ secrets.GITHUB_TOKEN }}
                   # CLI arguments
                   args: --check .
-                  version: 2.4.1
+                  version: 2.5.2
