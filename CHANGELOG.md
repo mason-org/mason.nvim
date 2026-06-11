@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.1](https://github.com/mason-org/mason.nvim/compare/v2.3.0...v2.3.1) (2026-06-11)
+
+
+### Bug Fixes
+
+* **fs:** implement rmrf natively via libuv ([#2098](https://github.com/mason-org/mason.nvim/issues/2098)) ([8838e7a](https://github.com/mason-org/mason.nvim/commit/8838e7acf07679fb717246518d2b83cbe3a1078e))
+* **nuget:** also support .cmd shims on Windows ([#2102](https://github.com/mason-org/mason.nvim/issues/2102)) ([16ba83b](https://github.com/mason-org/mason.nvim/commit/16ba83bfc8a25f52bb545134f5bee082b195c460))
+
 ## [2.3.0](https://github.com/mason-org/mason.nvim/compare/v2.2.1...v2.3.0) (2026-05-22)
 
 
