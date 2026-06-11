@@ -31,7 +31,7 @@ jobs:
                     - v0.12.3
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
             - uses: rhysd/action-setup-vim@v1
               with:
                   neovim: true
