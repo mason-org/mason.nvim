@@ -182,11 +182,14 @@ local function check_languages()
         check_thunk { cmd = "composer", args = { "--version" }, name = "Composer", relaxed = true },
         check_thunk { cmd = "php", args = { "--version" }, name = "PHP", relaxed = true },
         check_thunk {
-            cmd = "npm",
+            cmd = settings.current.npm.use_pnpm and "pnpm" or "npm",
             args = { "--version" },
-            name = "npm",
+            name = settings.current.npm.use_pnpm and "pnpm" or "npm",
             relaxed = true,
             version_check = function(version)
+                if settings.current.npm.use_pnpm then
+                    return
+                end
                 -- Parses output such as "8.1.2" into major, minor, patch components
                 local _, _, major = version:find "(%d+)%.(%d+)%.(%d+)"
                 -- Based off of general observations of feature parity.

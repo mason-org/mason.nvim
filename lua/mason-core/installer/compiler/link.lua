@@ -7,6 +7,7 @@ local fs = require "mason-core.fs"
 local log = require "mason-core.log"
 local path = require "mason-core.path"
 local platform = require "mason-core.platform"
+local settings = require "mason.settings"
 
 local M = {}
 
@@ -112,8 +113,20 @@ local bin_delegates = {
     ["nuget"] = function(target)
         return require("mason-core.installer.managers.nuget").bin_path(target)
     end,
-    ["npm"] = function(target)
-        return require("mason-core.installer.managers.npm").bin_path(target)
+    ["npm"] = function(target, bin)
+        local manager = settings.current.npm.use_pnpm and require "mason-core.installer.managers.pnpm"
+            or require "mason-core.installer.managers.npm"
+        local bin_path_result = manager.bin_path(target)
+        if not settings.current.npm.use_pnpm then
+            return bin_path_result
+        end
+        return bin_path_result:and_then(function(bin_path)
+            local installer = require "mason-core.installer"
+            local ctx = installer.context()
+            return Result.pcall(function()
+                return ctx:write_exec_wrapper(bin, bin_path)
+            end)
+        end)
     end,
     ["gem"] = function(target)
         return require("mason-core.installer.managers.gem").create_bin_wrapper(target)
