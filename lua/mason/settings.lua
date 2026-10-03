@@ -186,10 +186,71 @@ local DEFAULT_SETTINGS = {
     },
 }
 
+---@class MasonRegistryCacheUserSettings
+---@field refresh? boolean
+---@field duration? integer
+
+---@class MasonFirewallUserSettings
+---@field enabled? boolean
+---@field auto_managed? boolean
+
+---@class MasonGithubUserSettings
+---@field download_url_template? string
+
+---@class MasonPipUserSettings
+---@field upgrade_pip? boolean
+---@field install_args? string[]
+
+---@class MasonNpmUserSettings
+---@field install_args? string[]
+
+---@class MasonUiIconsUserSettings
+---@field package_installed? string
+---@field package_pending? string
+---@field package_uninstalled? string
+
+---@class MasonUiKeymapsUserSettings
+---@field toggle_package_expand? string
+---@field install_package? string
+---@field update_package? string
+---@field check_package_version? string
+---@field update_all_packages? string
+---@field check_outdated_packages? string
+---@field uninstall_package? string
+---@field cancel_installation? string
+---@field apply_language_filter? string
+---@field toggle_package_install_log? string
+---@field toggle_help? string
+
+---@class MasonUiUserSettings
+---@field check_outdated_packages_on_open? boolean
+---@field border? string | table
+---@field backdrop? integer
+---@field width? number
+---@field height? number
+---@field icons? MasonUiIconsUserSettings
+---@field keymaps? MasonUiKeymapsUserSettings
+
+---@class MasonUserSettings
+---@field install_root_dir? string
+---@field PATH? "prepend" | "append" | "skip"
+---@field log_level? integer
+---@field max_concurrent_installers? integer
+---@field registries? string[]
+---@field system_registries? string[]
+---@field registry_cache? MasonRegistryCacheUserSettings
+---@field firewall? MasonFirewallUserSettings
+---@field providers? string[]
+---@field github? MasonGithubUserSettings
+---@field pip? MasonPipUserSettings
+---@field npm? MasonNpmUserSettings
+---@field ui? MasonUiUserSettings
+
 M._DEFAULT_SETTINGS = DEFAULT_SETTINGS
+---@type MasonSettings
 M.current = M._DEFAULT_SETTINGS
 
----@param opts MasonSettings
+---@param opts MasonSettings | MasonUserSettings
 function M.set(opts)
     M.current = vim.tbl_deep_extend("force", vim.deepcopy(M.current), opts)
 end

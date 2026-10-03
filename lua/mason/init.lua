@@ -15,7 +15,7 @@ end
 
 M.has_setup = false
 
----@param config MasonSettings?
+---@param config MasonSettings | MasonUserSettings | nil
 function M.setup(config)
     if config then
         settings.set(config)
