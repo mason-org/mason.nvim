@@ -18,9 +18,10 @@ local function debounced(debounced_fn)
         end
         queued = true
         vim.schedule(function()
-            debounced_fn(last_arg)
+            local arg = last_arg
             queued = false
             last_arg = nil
+            debounced_fn(arg)
         end)
     end
 end
