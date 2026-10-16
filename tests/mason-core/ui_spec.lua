@@ -249,6 +249,34 @@ describe("integration test", function()
             .was_called_with(match.is_number(), 0, -1, false, { "Line number 1!", "New state", "My highlighted text" })
     end)
 
+    it("renders state changes that occur during rendering", function()
+        local window = display.new_view_only_win("test", "my-filetype")
+        local mutate_state = window.state { text = "Idle" }
+
+        window.view(function(state)
+            local text = state.text
+            if text == "Installing" then
+                mutate_state(function(current_state)
+                    current_state.text = "Installed"
+                end)
+            end
+            return Ui.Text { text }
+        end)
+
+        window.init {}
+        window.open()
+        a.run_blocking(a.wait, vim.schedule)
+        local bufnr = vim.api.nvim_get_current_buf()
+
+        mutate_state(function(state)
+            state.text = "Installing"
+        end)
+        a.run_blocking(a.wait, vim.schedule)
+        a.run_blocking(a.wait, vim.schedule)
+
+        assert.same({ "Installed" }, vim.api.nvim_buf_get_lines(bufnr, 0, -1, false))
+    end)
+
     it("anchors to sticky cursor", function()
         local window = display.new_view_only_win("test", "my-filetype")
         window.view(function(state)
